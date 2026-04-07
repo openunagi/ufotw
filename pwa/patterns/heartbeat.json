@@ -1,0 +1,11 @@
+{
+  "name": "heartbeat",
+  "description": "Heartbeat rhythm — lub-dub",
+  "loop": true,
+  "steps": [
+    { "speed": 100, "direction": 0, "duration": 0.12 },
+    { "speed": 30,  "direction": 0, "duration": 0.12 },
+    { "speed": 80,  "direction": 0, "duration": 0.12 },
+    { "speed": 0,   "direction": 0, "duration": 0.90 }
+  ]
+}

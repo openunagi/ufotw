@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Shared pattern plaza — public read, anonymous-auth write, admin-only delete.
+    match /shared_patterns/{doc} {
+      allow read: if true;
+
+      allow create: if
+        request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+             'title', 'author', 'description', 'tags',
+             'steps', 'loop', 'stepCount', 'durationSec',
+             'authorUid', 'createdAt'
+           ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.author is string
+        && request.resource.data.author.size() <= 40
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.tags is list
+        && request.resource.data.tags.size() <= 10
+        && request.resource.data.steps is list
+        && request.resource.data.steps.size() >= 1
+        && request.resource.data.steps.size() <= 500
+        && request.resource.data.loop is bool
+        && request.resource.data.stepCount is number
+        && request.resource.data.durationSec is number
+        && request.resource.data.createdAt == request.time;
+
+      // Client-side updates / deletes are always forbidden.
+      // Moderation deletes go through the FastAPI admin endpoint, which uses
+      // the firebase-admin SDK and bypasses security rules.
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

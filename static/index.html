@@ -1,0 +1,2451 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UFO TW</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card: #141414;
+      --card2: #1c1c1c;
+      --accent: #ff3333;
+      --warm: #ff8800;
+      --text: #e8e8e8;
+      --muted: #555;
+      --border: #2a2a2a;
+      --green: #33ff88;
+      --blue: #3388ff;
+      --purple: #aa55ff;
+      --cyan: #22ddcc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 14px 18px 32px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0 12px;
+    }
+    h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.12em; }
+
+    .stop-all {
+      display: block;
+      width: 100%;
+      padding: 17px;
+      background: var(--accent);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 24px rgba(255,51,51,0.35);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .stop-all:active { transform: scale(0.98); box-shadow: 0 2px 10px rgba(255,51,51,0.25); }
+
+    /* ── Two-column panels ── */
+    .panels-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .device-panel {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #2e2e2e;
+      border-radius: 16px;
+      padding: 11px;
+    }
+
+    .dev-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 9px;
+    }
+    .dev-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--warm);
+      text-transform: uppercase;
+    }
+    .conn-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    .dot.on { background: var(--green); box-shadow: 0 0 7px var(--green); }
+
+    .dev-stop {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1.5px solid var(--accent);
+      border-radius: 9px;
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      margin-bottom: 7px;
+      transition: background 0.15s;
+    }
+    .dev-stop:active { background: rgba(255,51,51,0.15); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px 11px 12px;
+      margin-bottom: 6px;
+    }
+    .label {
+      font-size: 0.61rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 9px;
+    }
+
+    .speed-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+    .speed-num { font-size: 2.8rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .speed-max { font-size: 0.75rem; color: var(--muted); margin-left: 3px; }
+    .bar-track {
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 7px;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--warm), var(--accent));
+      border-radius: 3px;
+      transition: width 0.15s;
+    }
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 38px;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: var(--card2);
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 25px; height: 25px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-top: -11px;
+      box-shadow: 0 0 9px rgba(255,51,51,0.5);
+    }
+    input[type=range]:disabled::-webkit-slider-thumb { background: var(--muted); box-shadow: none; }
+    .pattern-playing {
+      text-align: center;
+      font-size: 0.67rem;
+      color: var(--warm);
+      min-height: 13px;
+      margin-top: 2px;
+    }
+
+    .dir-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .dir-btn {
+      padding: 10px 6px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-align: center;
+    }
+    .dir-btn.active { border-color: var(--warm); background: rgba(255,136,0,0.12); color: var(--warm); }
+    .dir-btn:active { transform: scale(0.96); }
+
+    .max-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .max-label {
+      font-size: 0.6rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+    .max-slider {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 28px;
+      background: transparent;
+      cursor: pointer;
+    }
+    .max-slider::-webkit-slider-runnable-track {
+      height: 3px;
+      background: var(--card2);
+      border-radius: 2px;
+      border: 1px solid var(--border);
+    }
+    .max-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      background: #555;
+      border-radius: 50%;
+      margin-top: -8px;
+    }
+    .max-val {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 26px;
+      text-align: right;
+    }
+
+    .pattern-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .pat-btn {
+      padding: 9px 3px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.58rem;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-align: center;
+    }
+    .pat-btn .icon { font-size: 0.9rem; display: block; margin-bottom: 2px; }
+    .pat-btn:hover { border-color: var(--warm); color: var(--text); }
+    .pat-btn.active { border-color: var(--warm); background: rgba(255,136,0,0.15); color: var(--warm); }
+    .pat-btn:active { transform: scale(0.94); }
+
+    .timer-row { display: flex; gap: 5px; align-items: stretch; }
+    .timer-input {
+      flex: 1;
+      padding: 8px 5px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+    .timer-input:focus { outline: none; border-color: var(--warm); }
+    .t-btn {
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid;
+    }
+    .t-btn:active { transform: scale(0.96); }
+    .t-btn.set { background: rgba(255,136,0,0.15); border-color: var(--warm); color: var(--warm); }
+    .t-btn.cancel { background: transparent; border-color: var(--border); color: var(--muted); }
+    .timer-countdown {
+      font-size: 0.67rem;
+      color: var(--warm);
+      min-height: 13px;
+      margin-top: 5px;
+      text-align: center;
+    }
+
+    /* ── Toggle button (Smooth / Beat / Drift / Perceptual) ── */
+    .toggle-btn {
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .toggle-btn.active-green {
+      border-color: var(--green);
+      background: rgba(51,255,136,0.1);
+      color: var(--green);
+    }
+    .toggle-btn.active-blue {
+      border-color: var(--blue);
+      background: rgba(51,136,255,0.1);
+      color: var(--blue);
+    }
+    .toggle-btn.active-purple {
+      border-color: var(--purple);
+      background: rgba(170,85,255,0.1);
+      color: var(--purple);
+    }
+    .toggle-btn:active { transform: scale(0.96); }
+
+    /* ── Smooth row ── */
+    .smooth-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    /* ── Beat sync card ── */
+    .beat-controls {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .beat-meter {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      opacity: 0.4;
+      transition: opacity 0.3s;
+    }
+    .beat-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+      border-radius: 3px;
+      transition: width 0.08s;
+    }
+    .sens-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    /* ── Drift card ── */
+    .drift-top-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .drift-groove-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    /* ── Linked patterns ── */
+    .linked-section {
+      border: 1px solid #1e2a44;
+      border-radius: 16px;
+      padding: 14px;
+      background: #090d15;
+      margin-bottom: 16px;
+    }
+    .linked-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .linked-subtitle {
+      font-size: 0.61rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .linked-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    @media (max-width: 600px) {
+      .linked-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .linked-btn {
+      padding: 13px 6px;
+      background: transparent;
+      border: 1.5px solid #1e2a44;
+      border-radius: 11px;
+      color: #7788bb;
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .linked-btn .licon { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+    .linked-btn .ldesc { font-size: 0.56rem; color: var(--muted); display: block; margin-top: 3px; }
+    .linked-btn:hover { border-color: var(--blue); color: #aabbff; background: rgba(51,136,255,0.07); }
+    .linked-btn:active { transform: scale(0.95); }
+    .linked-stop-row { margin-top: 8px; }
+    .linked-stop {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .linked-stop:active { background: rgba(255,255,255,0.04); }
+
+    /* ── Pattern Editor ── */
+    .editor-section {
+      border: 1px solid #1a2a1a;
+      border-radius: 16px;
+      padding: 14px;
+      background: #080f08;
+      margin-bottom: 16px;
+    }
+    .editor-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 0;
+    }
+    .editor-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+    .editor-chevron {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    .editor-chevron.open { transform: rotate(180deg); }
+    .editor-body { display: none; margin-top: 12px; }
+    .editor-body.open { display: block; }
+    .editor-ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .editor-select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      padding: 5px 8px;
+      font-size: 0.74rem;
+    }
+    .editor-select:focus { outline: none; border-color: var(--green); }
+    .editor-cb-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .editor-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .step-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 9px;
+    }
+    .step-top-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .step-num {
+      font-size: 0.67rem;
+      color: var(--muted);
+      min-width: 20px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .step-dir-btn {
+      padding: 3px 9px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      min-width: 48px;
+      text-align: center;
+    }
+    .step-dir-btn.active { border-color: var(--warm); color: var(--warm); background: rgba(255,136,0,0.1); }
+    .step-dur {
+      width: 52px;
+      padding: 3px 5px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.74rem;
+      text-align: center;
+    }
+    .step-dur:focus { outline: none; border-color: var(--green); }
+    .step-s-label { font-size: 0.62rem; color: var(--muted); }
+    .step-spacer { flex: 1; }
+    .step-act-btn {
+      padding: 3px 7px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .step-act-btn:hover { color: var(--text); border-color: #555; }
+    .step-act-btn.del:hover { color: var(--accent); border-color: var(--accent); }
+    .step-spd-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .step-range {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 28px;
+      background: transparent;
+      cursor: pointer;
+    }
+    .step-range::-webkit-slider-runnable-track {
+      height: 3px;
+      background: var(--card);
+      border-radius: 2px;
+      border: 1px solid var(--border);
+    }
+    .step-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      background: var(--warm);
+      border-radius: 50%;
+      margin-top: -8px;
+      box-shadow: 0 0 6px rgba(255,136,0,0.4);
+    }
+    .step-spd-val {
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-width: 26px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .editor-add-row { text-align: center; margin-bottom: 10px; }
+    .editor-footer {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+    .editor-name {
+      flex: 1;
+      min-width: 100px;
+      padding: 6px 9px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 0.78rem;
+    }
+    .editor-name:focus { outline: none; border-color: var(--green); }
+    .e-btn {
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .e-btn:active { transform: scale(0.96); }
+    .e-btn.add    { border-color: var(--border); color: var(--muted); background: transparent; }
+    .e-btn.add:hover { border-color: #555; color: var(--text); }
+    .e-btn.preview { border-color: var(--blue); color: var(--blue); background: rgba(51,136,255,0.08); }
+    .e-btn.save   { border-color: var(--green); color: var(--green); background: rgba(51,255,136,0.08); }
+    .e-btn.arc-start { border-color: var(--purple); color: var(--purple); background: rgba(170,85,255,0.08); }
+    .e-btn.arc-stop  { border-color: var(--border); color: var(--muted); background: transparent; }
+    .editor-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.74rem;
+      padding: 16px;
+    }
+
+    /* ── Narrative Arc section ── */
+    .arc-section {
+      border: 1px solid #2a1a44;
+      border-radius: 16px;
+      padding: 14px;
+      background: #0a0810;
+      margin-bottom: 16px;
+    }
+    .arc-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .arc-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--purple);
+      text-transform: uppercase;
+    }
+    .arc-chevron {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    .arc-chevron.open { transform: rotate(180deg); }
+    .arc-body { display: none; margin-top: 12px; }
+    .arc-body.open { display: block; }
+    .arc-ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .arc-wp-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .arc-wp-card {
+      background: var(--card2);
+      border: 1px solid #2a1a44;
+      border-radius: 9px;
+      padding: 7px 9px;
+    }
+    .arc-wp-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .arc-t-input {
+      width: 46px;
+      padding: 3px 5px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--purple);
+      font-size: 0.74rem;
+      text-align: center;
+    }
+    .arc-t-input:focus { outline: none; border-color: var(--purple); }
+    .arc-spd-val {
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-width: 26px;
+      text-align: right;
+      color: var(--purple);
+      font-variant-numeric: tabular-nums;
+    }
+    .arc-easing-sel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 3px 6px;
+      font-size: 0.68rem;
+    }
+    .arc-easing-sel:focus { outline: none; border-color: var(--purple); }
+    .arc-groove-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .arc-rotor2-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 6px 0;
+    }
+    .arc-r2g-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 6px 0;
+    }
+    .arc-btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .arc-hint {
+      font-size: 0.6rem;
+      color: #553377;
+      margin: 4px 0;
+    }
+
+    /* ── Share Plaza section ── */
+    .share-section {
+      border: 1px solid #0f2a2a;
+      border-radius: 16px;
+      padding: 14px;
+      background: #071414;
+      margin-bottom: 16px;
+    }
+    .share-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .share-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+    .share-chevron {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    .share-chevron.open { transform: rotate(180deg); }
+    .share-body { display: none; margin-top: 12px; }
+    .share-body.open { display: block; }
+
+    .share-search {
+      width: 100%;
+      background: #0e1f1f;
+      border: 1px solid #1a3838;
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 9px 12px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .share-search:focus { border-color: var(--cyan); }
+
+    .share-upload-form {
+      border: 1px solid #1a3838;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      background: #0b1a1a;
+    }
+    .share-upload-form summary {
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      user-select: none;
+      padding: 2px 0;
+    }
+    .share-upload-form[open] summary { margin-bottom: 10px; }
+    .share-upload-form input[type="text"],
+    .share-upload-form input:not([type]),
+    .share-upload-form textarea,
+    .share-upload-form select {
+      width: 100%;
+      background: #0e1f1f;
+      border: 1px solid #1a3838;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      outline: none;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .share-upload-form input:focus,
+    .share-upload-form textarea:focus,
+    .share-upload-form select:focus { border-color: var(--cyan); }
+    .share-upload-form button {
+      background: var(--cyan);
+      color: #001414;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .share-upload-form button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .share-msg {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      min-height: 1em;
+    }
+    .share-msg.ok { color: var(--green); }
+    .share-msg.err { color: var(--accent); }
+
+    .share-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .share-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.74rem;
+      padding: 16px;
+    }
+    .share-card {
+      border: 1px solid #1a3838;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #0b1a1a;
+    }
+    .share-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .share-card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .share-card-author {
+      font-size: 0.68rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .share-canvas {
+      width: 100%;
+      max-width: 100%;
+      height: 44px;
+      display: block;
+      background: #050f0f;
+      border-radius: 6px;
+      margin: 6px 0;
+    }
+    .share-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 5px 0;
+    }
+    .share-tag-chip {
+      font-size: 0.62rem;
+      color: var(--cyan);
+      background: rgba(34, 221, 204, 0.08);
+      border: 1px solid rgba(34, 221, 204, 0.25);
+      border-radius: 10px;
+      padding: 2px 8px;
+    }
+    .share-meta {
+      font-size: 0.66rem;
+      color: var(--muted);
+      margin: 4px 0;
+    }
+    .share-desc {
+      font-size: 0.74rem;
+      color: #bcbcbc;
+      margin: 4px 0 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .share-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .share-btn {
+      background: #112424;
+      border: 1px solid #1e3838;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+    .share-btn:hover { background: #173030; border-color: var(--cyan); color: var(--cyan); }
+    .share-delete-btn {
+      background: transparent;
+      border: none;
+      color: #aa3333;
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      flex-shrink: 0;
+    }
+    .share-delete-btn:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>UFO TW</h1>
+  <button class="toggle-btn" id="perceptualBtn" onclick="togglePerceptual()" title="Weber-Fechner: slider値を対数スケールで送信">⊙ Perceptual</button>
+</header>
+
+<button class="stop-all" onclick="stopAll()">&#9632; STOP ALL</button>
+
+<div class="panels-row" id="devContainer"></div>
+
+<div class="linked-section">
+  <div class="linked-title">⇄ Linked Patterns</div>
+  <div class="linked-subtitle">両ローターを連動させる。ボタン1つで同時起動。</div>
+  <div class="linked-grid">
+    <button class="linked-btn" onclick="linked('chase')">
+      <span class="licon">⇒</span>
+      Chase
+      <span class="ldesc">escalate × pulse</span>
+    </button>
+    <button class="linked-btn" onclick="linked('mirror')">
+      <span class="licon">⇄</span>
+      Mirror
+      <span class="ldesc">wave × surge</span>
+    </button>
+    <button class="linked-btn" onclick="linked('contrast')">
+      <span class="licon">◑</span>
+      Contrast
+      <span class="ldesc">tease × storm</span>
+    </button>
+    <button class="linked-btn" onclick="linked('breath')">
+      <span class="licon">○</span>
+      Breath
+      <span class="ldesc">breath × breath</span>
+    </button>
+    <button class="linked-btn" onclick="linked('sync')">
+      <span class="licon">⚡</span>
+      Storm Sync
+      <span class="ldesc">storm × storm</span>
+    </button>
+    <button class="linked-btn" onclick="linked('tidal')">
+      <span class="licon">〰</span>
+      Tidal
+      <span class="ldesc">breath × wave</span>
+    </button>
+    <button class="linked-btn" onclick="linked('soft')">
+      <span class="licon">✿</span>
+      Soft
+      <span class="ldesc">gentle × gentle</span>
+    </button>
+    <button class="linked-btn" onclick="linked('rhythm')">
+      <span class="licon">♫</span>
+      Rhythm
+      <span class="ldesc">heartbeat × pulse</span>
+    </button>
+    <button class="linked-btn" onclick="linked('tide')" style="grid-column: 1 / -1; border-color: #1e3a5a; color: #5599cc;">
+      <span class="licon">≋</span>
+      Tide — 7min Journey
+      <span class="ldesc">両ローター同時 · 静寂→焦らし→絶頂→余韻</span>
+    </button>
+  </div>
+  <div class="linked-stop-row">
+    <button class="linked-stop" onclick="stopAll()">&#9632; Stop Linked</button>
+  </div>
+</div>
+
+<!-- ── Pattern Editor ── -->
+<div class="editor-section">
+  <div class="editor-title-row" onclick="toggleEditor()">
+    <span class="editor-title">✏ Pattern Editor</span>
+    <span class="editor-chevron" id="editorChevron">▼</span>
+  </div>
+  <div class="editor-body" id="editorBody">
+    <div class="editor-ctrl-row">
+      <select class="editor-select" id="editorLoadSel" onchange="loadPatternToEditor(this.value)">
+        <option value="">— Load preset —</option>
+      </select>
+      <select class="editor-select" id="editorDeviceSel" onchange="editorDevice=parseInt(this.value)">
+        <option value="0">Rotor 1</option>
+        <option value="1">Rotor 2</option>
+      </select>
+      <label class="editor-cb-label">
+        <input type="checkbox" id="editorLoop" onchange="editorLoop=this.checked"> Loop
+      </label>
+    </div>
+
+    <div class="editor-steps" id="editorSteps">
+      <div class="editor-empty">No steps. Click + Add Step to begin.</div>
+    </div>
+
+    <div class="editor-add-row">
+      <button class="e-btn add" onclick="addEditorStep()">+ Add Step</button>
+    </div>
+
+    <div class="editor-footer">
+      <input type="text" class="editor-name" id="editorName" placeholder="Pattern name…">
+      <button class="e-btn preview" onclick="previewEditorPattern()">▶ Preview</button>
+      <button class="e-btn save" onclick="saveEditorPattern()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Narrative Arc ── -->
+<div class="arc-section">
+  <div class="arc-title-row" onclick="toggleArc()">
+    <span class="arc-title">🎭 Narrative Arc</span>
+    <span class="arc-chevron" id="arcChevron">▼</span>
+  </div>
+  <div class="arc-body" id="arcBody">
+
+    <div class="arc-ctrl-row">
+      <select class="editor-select" id="arcPresetSel" onchange="loadArcPreset(this.value)">
+        <option value="">— Preset —</option>
+        <option value="tease">焦らし型 (10min)</option>
+        <option value="rise">急上昇型 (3min)</option>
+        <option value="tidal">潮の満ち引き (8min)</option>
+        <option value="chase_preset">追いかけっこ (5min)</option>
+      </select>
+      <span class="max-label">Total</span>
+      <input type="number" class="timer-input" id="arcTotal" min="10" max="7200" value="600"
+             style="width:70px" oninput="arcTotalSec=Math.max(10,parseInt(this.value)||600)">
+      <span class="max-label">s</span>
+    </div>
+
+    <div class="arc-wp-list" id="arcWpList">
+      <div class="editor-empty">Loading…</div>
+    </div>
+    <div style="text-align:center;margin:6px 0">
+      <button class="e-btn add" onclick="addArcWaypoint()">+ Add Waypoint</button>
+    </div>
+
+    <div class="arc-groove-row">
+      <span class="max-label">Groove</span>
+      <input type="range" class="max-slider" id="arcGrooveSlider" min="0" max="0.4" step="0.05" value="0.2"
+             oninput="arcGroove=parseFloat(this.value);document.getElementById('arcGrooveVal').textContent=arcGroove.toFixed(2)">
+      <span class="max-val" id="arcGrooveVal">0.20</span>
+      <span class="max-label" style="font-size:0.55rem;color:#553377">(D'Angelo drag)</span>
+    </div>
+
+    <div class="arc-rotor2-row">
+      <span class="max-label">2-Rotor</span>
+      <select class="editor-select" id="arcRotor2Mode" onchange="arcRotor2Mode=this.value;updateArcRotor2UI()">
+        <option value="same">Same</option>
+        <option value="chase">追いかけ</option>
+        <option value="invert">反転</option>
+      </select>
+      <span class="max-label" id="arcDelayLabel">Delay</span>
+      <input type="number" class="timer-input" id="arcRotor2Delay" min="1" max="600" value="30"
+             style="width:58px" oninput="arcRotor2Delay=Math.max(1,parseInt(this.value)||30)">
+      <span class="max-label" id="arcDelayUnit">s</span>
+    </div>
+    <div class="arc-r2g-row">
+      <span class="max-label">R2 Groove</span>
+      <input type="range" class="max-slider" id="arcR2GrooveSlider" min="0" max="0.4" step="0.05" value="0.3"
+             oninput="arcR2Groove=parseFloat(this.value);document.getElementById('arcR2GrooveVal').textContent=arcR2Groove.toFixed(2)">
+      <span class="max-val" id="arcR2GrooveVal">0.30</span>
+    </div>
+    <div class="arc-hint" id="arcHint"></div>
+
+    <div class="arc-btn-row">
+      <button class="e-btn arc-start" style="flex:1" onclick="startArc()">▶ Start Arc</button>
+      <button class="e-btn arc-stop" onclick="stopArc()">■ Stop</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Share Plaza ── -->
+<div class="share-section">
+  <div class="share-title-row" onclick="toggleShare()">
+    <span class="share-title">🌐 共有広場</span>
+    <span class="share-chevron" id="shareChevron">▼</span>
+  </div>
+  <div class="share-body" id="shareBody">
+
+    <input class="share-search" id="shareSearch" placeholder="タイトル / 作者 / タグで検索"
+           oninput="renderShareList()">
+
+    <details class="share-upload-form">
+      <summary>+ 波形を投稿する</summary>
+      <input type="text" id="shareUpTitle" maxlength="80" placeholder="タイトル (必須)">
+      <input type="text" id="shareUpAuthor" maxlength="40" placeholder="作者名 (任意・省略で anonymous)">
+      <input type="text" id="shareUpTags" placeholder="タグ (カンマ区切り・任意)">
+      <textarea id="shareUpDesc" maxlength="500" rows="2" placeholder="説明 (任意)"></textarea>
+      <select id="shareUpSource" onchange="onShareSourceChange()">
+        <option value="editor">現在の Pattern Editor から</option>
+        <option value="file">JSON ファイルから</option>
+      </select>
+      <input type="file" id="shareUpFile" accept=".json" style="display:none">
+      <button onclick="submitSharePattern()">投稿</button>
+      <div class="share-msg" id="shareUpMsg"></div>
+    </details>
+
+    <div class="share-list" id="shareList">
+      <div class="share-empty">接続中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase Web SDK (modular). Initializes anonymous auth + Firestore
+     and exposes window.ufoShare for the classic script below. -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import {
+  getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: 'AIzaSyA-UzffNY0byxlAOf7Zq77Ov4X2FWlFmK4',
+  authDomain: 'ufotwcontrol.firebaseapp.com',
+  projectId: 'ufotwcontrol',
+});
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const col  = collection(db, 'shared_patterns');
+
+let _uid = null;
+let _authResolve;
+const _authReady = new Promise(res => { _authResolve = res; });
+onAuthStateChanged(auth, user => {
+  if (user) { _uid = user.uid; _authResolve(user.uid); }
+});
+signInAnonymously(auth).catch(e => {
+  console.error('Anonymous sign-in failed:', e);
+  const msg = document.getElementById('shareUpMsg');
+  if (msg) { msg.textContent = '匿名ログインに失敗: ' + (e.message || e.code); msg.className = 'share-msg err'; }
+});
+
+window.ufoShare = {
+  whenReady() { return _authReady; },
+  get uid() { return _uid; },
+  subscribe(cb) {
+    return onSnapshot(query(col, orderBy('createdAt', 'desc'), limit(50)), snap => {
+      cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, err => {
+      console.error('Share feed error:', err);
+      const list = document.getElementById('shareList');
+      if (list) list.innerHTML = '<div class="share-empty">読み込みエラー: ' + (err.code || err.message) + '</div>';
+    });
+  },
+  async post(data) {
+    await _authReady;
+    return addDoc(col, { ...data, authorUid: _uid, createdAt: serverTimestamp() });
+  },
+  async deleteViaAdmin(id) {
+    const r = await fetch('/api/shared/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (!r.ok) {
+      let detail = '';
+      try { detail = (await r.json()).detail || ''; } catch {}
+      throw new Error('Delete failed (' + r.status + ') ' + detail);
+    }
+    return r.json();
+  },
+};
+window.dispatchEvent(new Event('ufoShareReady'));
+</script>
+
+<script>
+const PATTERNS = [
+  { name: 'wave',      icon: '〜' },
+  { name: 'pulse',     icon: '⚡' },
+  { name: 'escalate',  icon: '↑' },
+  { name: 'surge',     icon: '▲' },
+  { name: 'heartbeat', icon: '♥' },
+  { name: 'tease',     icon: '✦' },
+  { name: 'storm',     icon: '⟳' },
+  { name: 'breath',    icon: '○' },
+  { name: 'gentle',    icon: '✿' },
+  { name: 'tide',      icon: '≋' },
+  { name: 'random',    icon: '?' },
+];
+
+const LINKED = {
+  chase:    ['escalate', 'pulse'],
+  mirror:   ['wave', 'surge'],
+  contrast: ['tease', 'storm'],
+  breath:   ['breath', 'breath'],
+  sync:     ['storm', 'storm'],
+  tidal:    ['breath', 'wave'],
+  soft:     ['gentle', 'gentle'],
+  rhythm:   ['heartbeat', 'pulse'],
+  tide:     ['tide', 'tide'],
+};
+
+// ── Arc presets ─────────────────────────────────────────────────────────────
+const ARC_PRESETS = {
+  tease: {
+    total: 600,
+    waypoints: [
+      { t: 0.00, speed:  5, direction: 0, easing: 'linear' },
+      { t: 0.10, speed: 20, direction: 0, easing: 'ease_in' },
+      { t: 0.20, speed:  5, direction: 0, easing: 'ease_out' },
+      { t: 0.35, speed: 30, direction: 0, easing: 'ease_in' },
+      { t: 0.45, speed:  5, direction: 0, easing: 'ease_out' },
+      { t: 0.62, speed: 40, direction: 0, easing: 'ease_in' },
+      { t: 0.72, speed:  8, direction: 0, easing: 'ease_out' },
+      { t: 0.85, speed: 50, direction: 0, easing: 'ease_in' },
+      { t: 1.00, speed: 10, direction: 0, easing: 'ease_out' },
+    ],
+  },
+  rise: {
+    total: 180,
+    waypoints: [
+      { t: 0.00, speed:   5, direction: 0, easing: 'linear' },
+      { t: 0.80, speed:  90, direction: 0, easing: 'ease_in' },
+      { t: 1.00, speed: 100, direction: 0, easing: 'ease_in_out' },
+    ],
+  },
+  tidal: {
+    total: 480,
+    waypoints: [
+      { t: 0.00, speed:  5, direction: 0, easing: 'ease_in_out' },
+      { t: 0.20, speed: 45, direction: 0, easing: 'ease_in_out' },
+      { t: 0.40, speed:  8, direction: 0, easing: 'ease_in_out' },
+      { t: 0.60, speed: 55, direction: 0, easing: 'ease_in_out' },
+      { t: 0.80, speed: 10, direction: 0, easing: 'ease_in_out' },
+      { t: 1.00, speed: 40, direction: 0, easing: 'ease_in_out' },
+    ],
+  },
+  chase_preset: {
+    total: 300,
+    waypoints: [
+      { t: 0.00, speed:  5, direction: 0, easing: 'linear' },
+      { t: 0.30, speed: 60, direction: 0, easing: 'ease_in' },
+      { t: 0.50, speed: 80, direction: 0, easing: 'ease_in_out' },
+      { t: 0.70, speed: 40, direction: 0, easing: 'ease_out' },
+      { t: 1.00, speed: 10, direction: 0, easing: 'ease_out' },
+    ],
+    rotor2Mode: 'chase',
+    rotor2Delay: 30,
+  },
+};
+
+let devStates = [];
+let sliderPending = [];
+let sliderTimers = [];
+let timerEndMs = [];
+let timerIntervals = [];
+let maxSpeeds = [];
+
+// ── Smooth easing state ──
+let smoothEnabled = [];
+let smoothIntervals = [];
+let smoothTarget = [];
+let smoothCurrent = [];
+let smoothLastSent = [];
+
+// ── Beat sync state ──
+let beatEnabled = [];
+let beatAudioCtxs = [];
+let beatAnalysers = [];
+let beatTimers = [];
+let beatSensitivity = [];
+
+// ── Drift state (Feature A) ──
+let driftEnabled = [];
+let driftIntervals = [];
+let driftOffsets = [];
+let driftAmps = [];       // ±amplitude for speed drift
+let grooveValues = [];    // per-device groove (0.0–0.4) for pattern timing
+
+// ── Perceptual mode (Feature B) ──
+let perceptualMode = false;
+
+function logToDevice(v) {
+  // v: slider 0–100 → device 0–100 (log scale, low end expanded)
+  return Math.round(100 * Math.log(1 + v * (Math.E - 1) / 100));
+}
+
+let ws = null;
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    timerIntervals.forEach((_, i) => clearCountdown(i));
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+  ws.onerror = () => {};
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'status') applyStatus(msg);
+  };
+}
+
+function send(msg) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+function applyStatus(msg) {
+  const devs = msg.devices;
+  if (!devs) return;
+  if (devStates.length !== devs.length) initDevices(devs.length);
+  devs.forEach((d, i) => applyDevState(i, d));
+}
+
+function applyDevState(i, s) {
+  devStates[i] = s;
+
+  document.getElementById(`dot_${i}`).className = 'dot' + (s.connected ? ' on' : '');
+  document.getElementById(`connLabel_${i}`).textContent = s.connected ? 'connected' : 'offline';
+
+  document.getElementById(`speed_${i}`).textContent = s.speed;
+  document.getElementById(`bar_${i}`).style.width = s.speed + '%';
+
+  // Don't overwrite slider during smooth/beat/drift/pending
+  if (sliderPending[i] == null && !smoothEnabled[i] && !beatEnabled[i] && !driftEnabled[i]) {
+    document.getElementById(`slider_${i}`).value = s.speed;
+  }
+
+  document.getElementById(`cw_${i}`).className  = 'dir-btn' + (s.direction === 0 ? ' active' : '');
+  document.getElementById(`ccw_${i}`).className = 'dir-btn' + (s.direction === 1 ? ' active' : '');
+
+  PATTERNS.forEach(({ name }) => {
+    const btn = document.getElementById(`p_${i}_${name}`);
+    if (btn) btn.className = 'pat-btn' + (s.pattern === name ? ' active' : '');
+  });
+  document.getElementById(`pat_${i}`).textContent = s.pattern ? 'Pattern: ' + s.pattern : '';
+}
+
+// ── Init devices ───────────────────────────────────────────────────────────
+function initDevices(n) {
+  devStates        = Array(n).fill(null).map(() => ({ speed: 0, direction: 0, pattern: null }));
+  sliderPending    = Array(n).fill(null);
+  sliderTimers     = Array(n).fill(null);
+  timerEndMs       = Array(n).fill(null);
+  timerIntervals   = Array(n).fill(null);
+  maxSpeeds        = Array(n).fill(100);
+  smoothEnabled    = Array(n).fill(false);
+  smoothIntervals  = Array(n).fill(null);
+  smoothTarget     = Array(n).fill(0);
+  smoothCurrent    = Array(n).fill(0);
+  smoothLastSent   = Array(n).fill(-1);
+  beatEnabled      = Array(n).fill(false);
+  beatAudioCtxs    = Array(n).fill(null);
+  beatAnalysers    = Array(n).fill(null);
+  beatTimers       = Array(n).fill(null);
+  beatSensitivity  = Array(n).fill(1.0);
+  driftEnabled     = Array(n).fill(false);
+  driftIntervals   = Array(n).fill(null);
+  driftOffsets     = Array(n).fill(0);
+  driftAmps        = Array(n).fill(6);
+  grooveValues     = Array(n).fill(0);
+
+  // Update editor device selector
+  const devSel = document.getElementById('editorDeviceSel');
+  if (devSel) {
+    devSel.innerHTML = Array.from({length: n}, (_, i) => `<option value="${i}">Rotor ${i+1}</option>`).join('');
+  }
+
+  const container = document.getElementById('devContainer');
+  container.innerHTML = '';
+
+  for (let i = 0; i < n; i++) {
+    container.appendChild(buildPanel(i));
+
+    const grid = document.getElementById(`patGrid_${i}`);
+    PATTERNS.forEach(({ name, icon }) => {
+      const btn = document.createElement('button');
+      btn.className = 'pat-btn';
+      btn.id = `p_${i}_${name}`;
+      btn.innerHTML = `<span class="icon">${icon}</span>${name}`;
+      btn.onclick = () => togglePattern(i, name);
+      grid.appendChild(btn);
+    });
+
+    document.getElementById(`maxSpd_${i}`).addEventListener('input', e => {
+      maxSpeeds[i] = parseInt(e.target.value);
+      document.getElementById(`maxSpdVal_${i}`).textContent = maxSpeeds[i];
+    });
+
+    document.getElementById(`sensSlider_${i}`).addEventListener('input', e => {
+      beatSensitivity[i] = parseFloat(e.target.value);
+      document.getElementById(`sensVal_${i}`).textContent = beatSensitivity[i].toFixed(1) + 'x';
+    });
+
+    document.getElementById(`driftAmpSlider_${i}`).addEventListener('input', e => {
+      driftAmps[i] = parseInt(e.target.value);
+      document.getElementById(`driftAmpVal_${i}`).textContent = '±' + driftAmps[i];
+    });
+
+    document.getElementById(`grooveSlider_${i}`).addEventListener('input', e => {
+      grooveValues[i] = parseFloat(e.target.value);
+      document.getElementById(`grooveVal_${i}`).textContent = grooveValues[i].toFixed(2);
+    });
+
+    document.getElementById(`slider_${i}`).addEventListener('input', e => {
+      const rawV = parseInt(e.target.value);
+      const v = perceptualMode ? logToDevice(rawV) : rawV;
+
+      document.getElementById(`speed_${i}`).textContent = v;
+      document.getElementById(`bar_${i}`).style.width = v + '%';
+
+      if (beatEnabled[i]) return; // Beat sync takes priority
+
+      if (driftEnabled[i]) {
+        smoothTarget[i] = v;  // drift loop uses smoothTarget as base
+        return;
+      }
+
+      if (smoothEnabled[i]) {
+        smoothTarget[i] = v;
+      } else {
+        sliderPending[i] = v;
+        clearTimeout(sliderTimers[i]);
+        sliderTimers[i] = setTimeout(() => {
+          const spd = Math.max(0, Math.min(100, sliderPending[i] ?? 0));
+          const dir = (devStates[i] || {}).direction || 0;
+          send({ action: 'control', device: i, speed: spd, direction: dir });
+          sliderPending[i] = null;
+        }, 80);
+      }
+    });
+  }
+}
+
+function buildPanel(i) {
+  const el = document.createElement('div');
+  el.className = 'device-panel';
+  el.id = `dev_${i}`;
+  el.innerHTML = `
+    <div class="dev-header">
+      <span class="dev-label">Rotor ${i + 1}</span>
+      <div class="conn-status">
+        <div class="dot" id="dot_${i}"></div>
+        <span id="connLabel_${i}">offline</span>
+      </div>
+    </div>
+
+    <button class="dev-stop" onclick="stopDev(${i})">&#9632; STOP ${i + 1}</button>
+
+    <div class="card">
+      <div class="label">Speed</div>
+      <div class="speed-row">
+        <span class="speed-num" id="speed_${i}">0</span>
+        <span class="speed-max">/ 100</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar_${i}"></div></div>
+      <input type="range" id="slider_${i}" min="0" max="100" value="0" step="5">
+      <div class="smooth-row">
+        <button class="toggle-btn" id="smoothBtn_${i}" onclick="toggleSmooth(${i})">Smooth</button>
+      </div>
+      <div class="pattern-playing" id="pat_${i}"></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Direction</div>
+      <div class="dir-row">
+        <button class="dir-btn active" id="cw_${i}"  onclick="setDir(${i}, 0)">&#9664; CW</button>
+        <button class="dir-btn"        id="ccw_${i}" onclick="setDir(${i}, 1)">CCW &#9654;</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Beat Sync 🎵</div>
+      <div class="beat-controls">
+        <button class="toggle-btn" id="beatBtn_${i}" onclick="toggleBeat(${i})">🎵 Beat</button>
+        <div class="beat-meter" id="beatMeter_${i}">
+          <div class="beat-fill" id="beatFill_${i}"></div>
+        </div>
+      </div>
+      <div class="sens-row">
+        <span class="max-label">Sens</span>
+        <input type="range" class="max-slider" id="sensSlider_${i}" min="0.5" max="3" step="0.1" value="1">
+        <span class="max-val" id="sensVal_${i}">1.0x</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Drift</div>
+      <div class="drift-top-row">
+        <button class="toggle-btn" id="driftBtn_${i}" onclick="toggleDrift(${i})">Drift</button>
+        <span class="max-label" style="margin-left:6px">幅</span>
+        <input type="range" class="max-slider" id="driftAmpSlider_${i}" min="2" max="15" step="1" value="6">
+        <span class="max-val" id="driftAmpVal_${i}">±6</span>
+      </div>
+      <div class="drift-groove-row">
+        <span class="max-label">Groove</span>
+        <input type="range" class="max-slider" id="grooveSlider_${i}" min="0" max="0.4" step="0.05" value="0">
+        <span class="max-val" id="grooveVal_${i}">0.00</span>
+        <span class="max-label" style="font-size:0.52rem;color:#553355">(D'Angelo)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Patterns</div>
+      <div class="max-row">
+        <span class="max-label">Max</span>
+        <input type="range" class="max-slider" id="maxSpd_${i}" min="10" max="100" value="100" step="5">
+        <span class="max-val" id="maxSpdVal_${i}">100</span>
+      </div>
+      <div class="pattern-grid" id="patGrid_${i}"></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Auto-stop Timer</div>
+      <div class="timer-row">
+        <input type="number" class="timer-input" id="timerMin_${i}" min="1" max="120" value="10">
+        <button class="t-btn set"    onclick="setTimer(${i})">Set</button>
+        <button class="t-btn cancel" onclick="cancelTimer(${i})">Cancel</button>
+      </div>
+      <div class="timer-countdown" id="countdown_${i}"></div>
+    </div>
+  `;
+  return el;
+}
+
+// ── Controls ───────────────────────────────────────────────────────────────
+function setDir(i, dir) {
+  const speed = Math.max(0, Math.min(100, (devStates[i] || {}).speed || 0));
+  send({ action: 'control', device: i, speed, direction: dir });
+}
+
+function togglePattern(i, name) {
+  const cur = (devStates[i] || {}).pattern;
+  const groove = grooveValues[i] || 0;
+  send({ action: 'pattern', device: i, name: cur === name ? 'stop' : name,
+         max_speed: maxSpeeds[i] ?? 100, groove });
+}
+
+function stopDev(i) {
+  clearCountdown(i);
+  stopSmooth(i);
+  stopBeat(i);
+  stopDrift(i);
+  send({ action: 'stop', device: i });
+}
+
+function stopAll() {
+  devStates.forEach((_, i) => {
+    clearCountdown(i);
+    stopSmooth(i);
+    stopBeat(i);
+    stopDrift(i);
+  });
+  send({ action: 'stop', device: 'all' });
+}
+
+// ── Linked ─────────────────────────────────────────────────────────────────
+function linked(name) {
+  const combo = LINKED[name];
+  if (!combo) return;
+  combo.forEach((pat, i) => {
+    if (i < devStates.length)
+      send({ action: 'pattern', device: i, name: pat,
+             max_speed: maxSpeeds[i] ?? 100, groove: grooveValues[i] || 0 });
+  });
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+function setTimer(i) {
+  const minutes = parseFloat(document.getElementById(`timerMin_${i}`).value);
+  if (!minutes || minutes <= 0) return;
+  fetch('/api/timer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device: i, minutes }),
+  });
+  timerEndMs[i] = Date.now() + minutes * 60000;
+  clearInterval(timerIntervals[i]);
+  timerIntervals[i] = setInterval(() => tickCountdown(i), 1000);
+  tickCountdown(i);
+}
+
+function cancelTimer(i) {
+  fetch(`/api/timer?device=${i}`, { method: 'DELETE' });
+  clearCountdown(i);
+}
+
+function tickCountdown(i) {
+  const rem = timerEndMs[i] - Date.now();
+  if (rem <= 0) { clearCountdown(i); return; }
+  const m = Math.floor(rem / 60000);
+  const s = Math.floor((rem % 60000) / 1000);
+  document.getElementById(`countdown_${i}`).textContent =
+    `Auto-stop in ${m}:${String(s).padStart(2, '0')}`;
+}
+
+function clearCountdown(i) {
+  clearInterval(timerIntervals[i]);
+  timerIntervals[i] = null;
+  timerEndMs[i] = null;
+  const el = document.getElementById(`countdown_${i}`);
+  if (el) el.textContent = '';
+}
+
+// ── Smooth Easing ──────────────────────────────────────────────────────────
+function toggleSmooth(i) {
+  if (smoothEnabled[i]) {
+    stopSmooth(i);
+  } else {
+    startSmooth(i);
+  }
+}
+
+function startSmooth(i) {
+  const curSpeed = (devStates[i] || {}).speed || 0;
+  smoothEnabled[i]   = true;
+  smoothCurrent[i]   = curSpeed;
+  smoothTarget[i]    = parseInt(document.getElementById(`slider_${i}`).value) || curSpeed;
+  smoothLastSent[i]  = -1;
+
+  document.getElementById(`smoothBtn_${i}`).classList.add('active-green');
+
+  smoothIntervals[i] = setInterval(() => {
+    smoothCurrent[i] += (smoothTarget[i] - smoothCurrent[i]) * 0.25;
+    const rounded = Math.round(smoothCurrent[i]);
+    if (rounded !== smoothLastSent[i]) {
+      smoothLastSent[i] = rounded;
+      const dir = (devStates[i] || {}).direction || 0;
+      send({ action: 'control', device: i, speed: rounded, direction: dir });
+    }
+  }, 100);
+}
+
+function stopSmooth(i) {
+  clearInterval(smoothIntervals[i]);
+  smoothIntervals[i] = null;
+  smoothEnabled[i] = false;
+  const btn = document.getElementById(`smoothBtn_${i}`);
+  if (btn) btn.classList.remove('active-green');
+}
+
+// ── Beat Sync ──────────────────────────────────────────────────────────────
+function toggleBeat(i) {
+  if (beatEnabled[i]) {
+    stopBeat(i);
+  } else {
+    startBeat(i);
+  }
+}
+
+async function startBeat(i) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('getUserMedia not supported in this browser.');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ctx = new AudioContext();
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+
+    beatAudioCtxs[i] = ctx;
+    beatAnalysers[i] = analyser;
+    beatEnabled[i]   = true;
+
+    document.getElementById(`beatBtn_${i}`).classList.add('active-blue');
+    document.getElementById(`beatMeter_${i}`).style.opacity = '1';
+    document.getElementById(`slider_${i}`).disabled = true;
+
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    let lastSpeed = -999;
+    let lastSendTime = 0;
+
+    beatTimers[i] = setInterval(() => {
+      analyser.getByteFrequencyData(buf);
+      // Bass: bins 0-5 (~0-430 Hz)
+      let sum = 0;
+      for (let b = 0; b < 6; b++) sum += buf[b];
+      const avg = sum / 6;
+
+      // Update level meter
+      const fill = document.getElementById(`beatFill_${i}`);
+      if (fill) fill.style.width = (avg / 255 * 100) + '%';
+
+      const sens = beatSensitivity[i] || 1.0;
+      const speed = Math.min(100, Math.round((avg / 255) * 100 * sens));
+
+      const now = Date.now();
+      if (Math.abs(speed - lastSpeed) >= 2 && now - lastSendTime >= 100) {
+        lastSpeed    = speed;
+        lastSendTime = now;
+        const dir = (devStates[i] || {}).direction || 0;
+        send({ action: 'control', device: i, speed, direction: dir });
+      }
+    }, 100);
+
+  } catch (e) {
+    alert('Microphone access failed: ' + e.message);
+  }
+}
+
+function stopBeat(i) {
+  clearInterval(beatTimers[i]);
+  beatTimers[i] = null;
+  if (beatAudioCtxs[i]) {
+    beatAudioCtxs[i].close();
+    beatAudioCtxs[i] = null;
+  }
+  beatAnalysers[i] = null;
+  beatEnabled[i]   = false;
+
+  const btn  = document.getElementById(`beatBtn_${i}`);
+  const fill = document.getElementById(`beatFill_${i}`);
+  const mtr  = document.getElementById(`beatMeter_${i}`);
+  const sld  = document.getElementById(`slider_${i}`);
+  if (btn)  btn.classList.remove('active-blue');
+  if (fill) fill.style.width = '0%';
+  if (mtr)  mtr.style.opacity = '0.4';
+  if (sld)  sld.disabled = false;
+}
+
+// ── Feature A: Speed Drift ─────────────────────────────────────────────────
+function toggleDrift(i) {
+  if (driftEnabled[i]) {
+    stopDrift(i);
+  } else {
+    startDrift(i);
+  }
+}
+
+function startDrift(i) {
+  driftEnabled[i] = true;
+  driftOffsets[i] = 0;
+  const curSpeed = parseInt(document.getElementById(`slider_${i}`).value) || 0;
+  smoothTarget[i] = perceptualMode ? logToDevice(curSpeed) : curSpeed;
+
+  document.getElementById(`driftBtn_${i}`).classList.add('active-purple');
+
+  let lastSent = -1;
+  const step = 2;  // Brownian step size
+
+  driftIntervals[i] = setInterval(() => {
+    const amp = driftAmps[i] || 6;
+    driftOffsets[i] += (Math.random() - 0.5) * step;
+    driftOffsets[i] = Math.max(-amp, Math.min(amp, driftOffsets[i]));
+
+    const base = smoothTarget[i];
+    const actual = Math.max(0, Math.min(100, Math.round(base + driftOffsets[i])));
+
+    if (actual !== lastSent) {
+      lastSent = actual;
+      const dir = (devStates[i] || {}).direction || 0;
+      send({ action: 'control', device: i, speed: actual, direction: dir });
+    }
+  }, 100);
+}
+
+function stopDrift(i) {
+  clearInterval(driftIntervals[i]);
+  driftIntervals[i] = null;
+  driftEnabled[i] = false;
+  driftOffsets[i] = 0;
+  const btn = document.getElementById(`driftBtn_${i}`);
+  if (btn) btn.classList.remove('active-purple');
+}
+
+// ── Feature B: Perceptual Mode ─────────────────────────────────────────────
+function togglePerceptual() {
+  perceptualMode = !perceptualMode;
+  const btn = document.getElementById('perceptualBtn');
+  if (perceptualMode) {
+    btn.classList.add('active-purple');
+    btn.textContent = '⊙ Perceptual ●';
+  } else {
+    btn.classList.remove('active-purple');
+    btn.textContent = '⊙ Perceptual';
+  }
+}
+
+// ── Pattern Editor ─────────────────────────────────────────────────────────
+let editorSteps  = [];
+let editorLoop   = false;
+let editorDevice = 0;
+let editorOpen   = false;
+
+function toggleEditor() {
+  editorOpen = !editorOpen;
+  document.getElementById('editorBody').classList.toggle('open', editorOpen);
+  document.getElementById('editorChevron').classList.toggle('open', editorOpen);
+  if (editorOpen) loadEditorPatternList();
+}
+
+function addEditorStep() {
+  editorSteps.push({ speed: 50, direction: 0, duration: 0.5 });
+  renderEditorSteps();
+}
+
+function removeEditorStep(idx) {
+  editorSteps.splice(idx, 1);
+  renderEditorSteps();
+}
+
+function moveEditorStep(idx, dir) {
+  const to = idx + dir;
+  if (to < 0 || to >= editorSteps.length) return;
+  [editorSteps[idx], editorSteps[to]] = [editorSteps[to], editorSteps[idx]];
+  renderEditorSteps();
+}
+
+function updateEditorStep(idx, field, value) {
+  if (idx >= 0 && idx < editorSteps.length) editorSteps[idx][field] = value;
+}
+
+function toggleEditorStepDir(idx) {
+  if (idx < 0 || idx >= editorSteps.length) return;
+  editorSteps[idx].direction = editorSteps[idx].direction === 0 ? 1 : 0;
+  const btn = document.getElementById(`stepDir_${idx}`);
+  if (btn) {
+    const isCW = editorSteps[idx].direction === 0;
+    btn.textContent = isCW ? '◀ CW' : 'CCW ▶';
+    btn.className = 'step-dir-btn' + (isCW ? '' : ' active');
+  }
+}
+
+function renderEditorSteps() {
+  const container = document.getElementById('editorSteps');
+  if (editorSteps.length === 0) {
+    container.innerHTML = '<div class="editor-empty">No steps. Click + Add Step to begin.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  editorSteps.forEach((step, idx) => {
+    const card = document.createElement('div');
+    card.className = 'step-card';
+    const isCW = step.direction === 0;
+    card.innerHTML = `
+      <div class="step-top-row">
+        <span class="step-num">#${idx + 1}</span>
+        <button class="step-dir-btn${isCW ? '' : ' active'}" id="stepDir_${idx}"
+                onclick="toggleEditorStepDir(${idx})">${isCW ? '◀ CW' : 'CCW ▶'}</button>
+        <span class="step-spacer"></span>
+        <span class="step-s-label">Dur</span>
+        <input type="number" class="step-dur" value="${step.duration.toFixed(1)}"
+               min="0.1" max="10" step="0.1"
+               onchange="updateEditorStep(${idx},'duration',Math.max(0.1,parseFloat(this.value)||0.5))">
+        <span class="step-s-label">s</span>
+        <button class="step-act-btn" onclick="moveEditorStep(${idx},-1)">↑</button>
+        <button class="step-act-btn" onclick="moveEditorStep(${idx},1)">↓</button>
+        <button class="step-act-btn del" onclick="removeEditorStep(${idx})">✕</button>
+      </div>
+      <div class="step-spd-row">
+        <input type="range" class="step-range" min="0" max="100" step="5" value="${step.speed}"
+               oninput="updateEditorStep(${idx},'speed',parseInt(this.value));
+                        document.getElementById('stepSpd_${idx}').textContent=this.value">
+        <span class="step-spd-val" id="stepSpd_${idx}">${step.speed}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function previewEditorPattern() {
+  if (editorSteps.length === 0) { alert('Add at least one step first.'); return; }
+  const groove = grooveValues[editorDevice] || 0;
+  send({
+    action: 'play_steps',
+    device: editorDevice,
+    steps:  editorSteps,
+    loop:   editorLoop,
+    groove,
+  });
+}
+
+async function saveEditorPattern() {
+  const name = document.getElementById('editorName').value.trim();
+  if (!name) { alert('Enter a pattern name.'); return; }
+  if (editorSteps.length === 0) { alert('Add at least one step first.'); return; }
+  try {
+    const r = await fetch('/api/patterns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, steps: editorSteps, loop: editorLoop }),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      alert('Save failed: ' + (d.detail || r.statusText));
+      return;
+    }
+    alert(`Pattern "${name}" saved!`);
+    loadEditorPatternList();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function loadEditorPatternList() {
+  try {
+    const r = await fetch('/api/patterns');
+    const data = await r.json();
+    const sel = document.getElementById('editorLoadSel');
+    const names = (data.patterns || []).filter(p => p !== 'random' && p !== '__editor__');
+    sel.innerHTML = '<option value="">— Load preset —</option>' +
+      names.map(p => `<option value="${p}">${p}</option>`).join('');
+  } catch (e) {}
+}
+
+async function loadPatternToEditor(name) {
+  if (!name) return;
+  try {
+    const r = await fetch(`/api/patterns/${encodeURIComponent(name)}`);
+    if (!r.ok) { alert('Failed to load pattern.'); return; }
+    const data = await r.json();
+    editorSteps = (data.steps || []).map(s => ({
+      speed:     Math.max(0, Math.min(100, s.speed ?? 50)),
+      direction: s.direction === 1 ? 1 : 0,
+      duration:  Math.max(0.1, s.duration ?? 0.5),
+    }));
+    editorLoop = !!data.loop;
+    document.getElementById('editorLoop').checked = editorLoop;
+    document.getElementById('editorName').value   = name;
+    renderEditorSteps();
+    document.getElementById('editorLoadSel').value = '';
+  } catch (e) {
+    alert('Error loading pattern: ' + e.message);
+  }
+}
+
+// ── Feature D: Narrative Arc ───────────────────────────────────────────────
+let arcOpen       = false;
+let arcWaypoints  = [];
+let arcTotalSec   = 600;
+let arcGroove     = 0.2;
+let arcRotor2Mode = 'same';
+let arcRotor2Delay = 30;
+let arcR2Groove   = 0.3;
+
+function toggleArc() {
+  arcOpen = !arcOpen;
+  document.getElementById('arcBody').classList.toggle('open', arcOpen);
+  document.getElementById('arcChevron').classList.toggle('open', arcOpen);
+  if (arcOpen && arcWaypoints.length === 0) loadArcPreset('tease');
+}
+
+function loadArcPreset(name) {
+  const preset = ARC_PRESETS[name];
+  if (!preset) return;
+  arcWaypoints = preset.waypoints.map(w => ({ ...w }));
+  arcTotalSec = preset.total;
+  document.getElementById('arcTotal').value = arcTotalSec;
+
+  if (preset.rotor2Mode) {
+    arcRotor2Mode = preset.rotor2Mode;
+    document.getElementById('arcRotor2Mode').value = arcRotor2Mode;
+    if (preset.rotor2Delay) {
+      arcRotor2Delay = preset.rotor2Delay;
+      document.getElementById('arcRotor2Delay').value = arcRotor2Delay;
+    }
+  }
+
+  renderArcWaypoints();
+  updateArcRotor2UI();
+  document.getElementById('arcPresetSel').value = '';
+}
+
+function updateArcRotor2UI() {
+  const mode = arcRotor2Mode;
+  const show = mode === 'chase';
+  document.getElementById('arcDelayLabel').style.opacity = show ? '1' : '0.3';
+  document.getElementById('arcRotor2Delay').style.opacity = show ? '1' : '0.3';
+  document.getElementById('arcDelayUnit').style.opacity = show ? '1' : '0.3';
+
+  const hint = document.getElementById('arcHint');
+  if (mode === 'chase') {
+    hint.textContent = `→ Rotor1 groove=${arcGroove.toFixed(2)}, Rotor2 groove=${arcR2Groove.toFixed(2)} — 片方が重く追いかける感覚`;
+  } else if (mode === 'invert') {
+    hint.textContent = '→ Rotor2 は方向が反転して再生';
+  } else {
+    hint.textContent = '→ 両ローター同じアークを再生';
+  }
+}
+
+function addArcWaypoint() {
+  const lastT = arcWaypoints.length > 0 ? arcWaypoints[arcWaypoints.length - 1].t : 0;
+  const newT = Math.min(1.0, parseFloat((lastT + 0.1).toFixed(2)));
+  arcWaypoints.push({ t: newT, speed: 50, direction: 0, easing: 'ease_in_out' });
+  renderArcWaypoints();
+}
+
+function removeArcWaypoint(idx) {
+  arcWaypoints.splice(idx, 1);
+  renderArcWaypoints();
+}
+
+function updateArcWp(idx, field, value) {
+  if (idx >= 0 && idx < arcWaypoints.length) arcWaypoints[idx][field] = value;
+}
+
+function toggleArcWpDir(idx) {
+  if (idx < 0 || idx >= arcWaypoints.length) return;
+  arcWaypoints[idx].direction = arcWaypoints[idx].direction === 0 ? 1 : 0;
+  const btn = document.getElementById(`arcWpDir_${idx}`);
+  if (btn) {
+    const isCW = arcWaypoints[idx].direction === 0;
+    btn.textContent = isCW ? '◀ CW' : 'CCW ▶';
+    btn.className = 'step-dir-btn' + (isCW ? '' : ' active');
+  }
+}
+
+function renderArcWaypoints() {
+  const container = document.getElementById('arcWpList');
+  if (arcWaypoints.length === 0) {
+    container.innerHTML = '<div class="editor-empty">No waypoints.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  arcWaypoints.forEach((wp, idx) => {
+    const card = document.createElement('div');
+    card.className = 'arc-wp-card';
+    const isCW = wp.direction === 0;
+    card.innerHTML = `
+      <div class="arc-wp-row">
+        <span class="step-s-label">t=</span>
+        <input type="number" class="arc-t-input" value="${wp.t.toFixed(2)}"
+               min="0" max="1" step="0.05"
+               onchange="updateArcWp(${idx},'t',Math.max(0,Math.min(1,parseFloat(this.value)||0)))">
+        <button class="step-dir-btn${isCW ? '' : ' active'}" id="arcWpDir_${idx}"
+                onclick="toggleArcWpDir(${idx})">${isCW ? '◀ CW' : 'CCW ▶'}</button>
+        <select class="arc-easing-sel" id="arcWpEasing_${idx}"
+                onchange="updateArcWp(${idx},'easing',this.value)">
+          <option value="linear"${wp.easing==='linear'?' selected':''}>linear</option>
+          <option value="ease_in"${wp.easing==='ease_in'?' selected':''}>ease_in ↗</option>
+          <option value="ease_out"${wp.easing==='ease_out'?' selected':''}>ease_out ↘</option>
+          <option value="ease_in_out"${wp.easing==='ease_in_out'?' selected':''}>ease_in_out ∫</option>
+        </select>
+        <span class="step-spacer"></span>
+        <button class="step-act-btn del" onclick="removeArcWaypoint(${idx})">✕</button>
+      </div>
+      <div class="step-spd-row" style="margin-top:5px">
+        <input type="range" class="step-range" min="0" max="100" step="5" value="${wp.speed}"
+               oninput="updateArcWp(${idx},'speed',parseInt(this.value));
+                        document.getElementById('arcWpSpd_${idx}').textContent=this.value"
+               style="--thumb-color: var(--purple)">
+        <span class="arc-spd-val" id="arcWpSpd_${idx}">${wp.speed}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function startArc() {
+  if (arcWaypoints.length < 2) {
+    alert('2つ以上のウェイポイントが必要です。');
+    return;
+  }
+  const total = arcTotalSec || 600;
+  send({
+    action: 'play_arc',
+    arc_spec: {
+      waypoints: arcWaypoints.map(w => ({
+        t: w.t,
+        speed: w.speed,
+        direction: w.direction,
+        easing: w.easing,
+      })),
+      total_seconds: total,
+    },
+    groove: arcGroove,
+    rotor2_mode: arcRotor2Mode,
+    rotor2_delay: arcRotor2Delay,
+    rotor2_groove: arcR2Groove,
+  });
+}
+
+function stopArc() {
+  send({ action: 'stop', device: 'all' });
+}
+
+// ── Share Plaza ────────────────────────────────────────────────────────────
+let shareOpen = false;
+let shareCache = [];
+let shareSubscribed = false;
+
+function toggleShare() {
+  shareOpen = !shareOpen;
+  document.getElementById('shareBody').classList.toggle('open', shareOpen);
+  document.getElementById('shareChevron').classList.toggle('open', shareOpen);
+  if (shareOpen) initShareFeed();
+}
+
+function initShareFeed() {
+  if (shareSubscribed) return;
+  if (!window.ufoShare) {
+    // Firebase module still loading — retry once it's ready.
+    window.addEventListener('ufoShareReady', initShareFeed, { once: true });
+    return;
+  }
+  shareSubscribed = true;
+  window.ufoShare.subscribe(docs => {
+    shareCache = docs;
+    renderShareList();
+  });
+}
+
+function renderShareList() {
+  const list = document.getElementById('shareList');
+  if (!list) return;
+  const q = (document.getElementById('shareSearch').value || '').trim().toLowerCase();
+  const filtered = q
+    ? shareCache.filter(d => {
+        const hay = [
+          d.title || '',
+          d.author || '',
+          (d.tags || []).join(' '),
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+      })
+    : shareCache;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="share-empty">' +
+      (shareCache.length === 0 ? 'まだ投稿がありません' : '一致する波形が見つかりません') +
+      '</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  for (const doc of filtered) {
+    const card = document.createElement('div');
+    card.className = 'share-card';
+
+    // Head: title + author + delete
+    const head = document.createElement('div');
+    head.className = 'share-card-head';
+    const title = document.createElement('div');
+    title.className = 'share-card-title';
+    title.textContent = doc.title || '(untitled)';
+    const author = document.createElement('div');
+    author.className = 'share-card-author';
+    author.textContent = 'by ' + (doc.author || 'anonymous');
+    const delBtn = document.createElement('button');
+    delBtn.className = 'share-delete-btn';
+    delBtn.title = 'この投稿を削除';
+    delBtn.textContent = '🗑';
+    delBtn.onclick = () => deleteShareItem(doc.id);
+    head.appendChild(title);
+    head.appendChild(author);
+    head.appendChild(delBtn);
+    card.appendChild(head);
+
+    // Canvas preview
+    const canvas = document.createElement('canvas');
+    canvas.className = 'share-canvas';
+    canvas.width = 480;
+    canvas.height = 88;
+    card.appendChild(canvas);
+    requestAnimationFrame(() => drawShareCanvas(canvas, doc.steps || [], !!doc.loop));
+
+    // Tags
+    if (doc.tags && doc.tags.length) {
+      const tagRow = document.createElement('div');
+      tagRow.className = 'share-tags';
+      for (const t of doc.tags) {
+        const chip = document.createElement('span');
+        chip.className = 'share-tag-chip';
+        chip.textContent = '#' + t;
+        tagRow.appendChild(chip);
+      }
+      card.appendChild(tagRow);
+    }
+
+    // Meta
+    const meta = document.createElement('div');
+    meta.className = 'share-meta';
+    const stepCount = doc.stepCount ?? (doc.steps ? doc.steps.length : 0);
+    const durSec = doc.durationSec ?? (doc.steps || []).reduce((s, x) => s + (x.duration || 0), 0);
+    meta.textContent = stepCount + ' steps · ' + durSec.toFixed(1) + 's' + (doc.loop ? ' · loop' : '');
+    card.appendChild(meta);
+
+    // Description
+    if (doc.description) {
+      const desc = document.createElement('div');
+      desc.className = 'share-desc';
+      desc.textContent = doc.description;
+      card.appendChild(desc);
+    }
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'share-actions';
+    const btnR1 = document.createElement('button');
+    btnR1.className = 'share-btn';
+    btnR1.textContent = '▶ R1 試す';
+    btnR1.onclick = () => playSharePattern(doc.id, 0);
+    const btnR2 = document.createElement('button');
+    btnR2.className = 'share-btn';
+    btnR2.textContent = '▶ R2 試す';
+    btnR2.onclick = () => playSharePattern(doc.id, 1);
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'share-btn';
+    btnEdit.textContent = '📋 Editor へ';
+    btnEdit.onclick = () => loadShareToEditor(doc.id);
+    const btnDl = document.createElement('button');
+    btnDl.className = 'share-btn';
+    btnDl.textContent = '💾 JSON';
+    btnDl.onclick = () => downloadShareJson(doc.id);
+    actions.appendChild(btnR1);
+    actions.appendChild(btnR2);
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnDl);
+    card.appendChild(actions);
+
+    list.appendChild(card);
+  }
+}
+
+function drawShareCanvas(canvas, steps, loop) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#050f0f';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!steps || steps.length === 0) return;
+  const total = steps.reduce((s, x) => s + Math.max(0.01, x.duration || 0), 0);
+  if (total <= 0) return;
+
+  let x = 0;
+  for (const s of steps) {
+    const dur = Math.max(0.01, s.duration || 0);
+    const w = (dur / total) * W;
+    const speed = Math.max(0, Math.min(100, s.speed || 0));
+    const h = (speed / 100) * (H - 4);
+    const dir = s.direction === 1 ? 1 : 0;
+    ctx.fillStyle = dir === 0 ? 'rgba(255,136,0,0.85)' : 'rgba(34,221,204,0.85)';
+    ctx.fillRect(x, H - h - 2, Math.max(1, w - 0.5), h);
+    x += w;
+  }
+
+  // Baseline
+  ctx.strokeStyle = '#1a3838';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, H - 2);
+  ctx.lineTo(W, H - 2);
+  ctx.stroke();
+
+  if (loop) {
+    ctx.fillStyle = 'rgba(34,221,204,0.8)';
+    ctx.font = 'bold 14px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText('↻', W - 4, 2);
+  }
+}
+
+function _findShareDoc(id) {
+  return shareCache.find(d => d.id === id);
+}
+
+function _normalizeSteps(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(s => ({
+    speed:     Math.max(0, Math.min(100, Math.round(Number(s.speed)) || 0)),
+    direction: Number(s.direction) === 1 ? 1 : 0,
+    duration:  Math.max(0.1, Math.min(10, Number(s.duration) || 0.5)),
+  }));
+}
+
+function playSharePattern(id, device) {
+  const doc = _findShareDoc(id);
+  if (!doc) return;
+  send({
+    action: 'play_steps',
+    device: device,
+    steps:  _normalizeSteps(doc.steps),
+    loop:   !!doc.loop,
+    groove: 0,
+  });
+}
+
+function loadShareToEditor(id) {
+  const doc = _findShareDoc(id);
+  if (!doc) return;
+  editorSteps = _normalizeSteps(doc.steps);
+  editorLoop  = !!doc.loop;
+  const loopEl = document.getElementById('editorLoop');
+  if (loopEl) loopEl.checked = editorLoop;
+  const nameEl = document.getElementById('editorName');
+  if (nameEl) nameEl.value = (doc.title || '').replace(/[^\w\-]/g, '_').slice(0, 40);
+  if (!editorOpen) toggleEditor();
+  renderEditorSteps();
+}
+
+function downloadShareJson(id) {
+  const doc = _findShareDoc(id);
+  if (!doc) return;
+  const payload = { steps: _normalizeSteps(doc.steps), loop: !!doc.loop };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (doc.title || 'pattern').replace(/[^\w\-]+/g, '_').slice(0, 40) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function onShareSourceChange() {
+  const src = document.getElementById('shareUpSource').value;
+  const file = document.getElementById('shareUpFile');
+  file.style.display = src === 'file' ? 'block' : 'none';
+}
+
+function _setShareMsg(text, cls) {
+  const el = document.getElementById('shareUpMsg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = 'share-msg' + (cls ? ' ' + cls : '');
+}
+
+async function submitSharePattern() {
+  if (!window.ufoShare) { _setShareMsg('Firebase 初期化中です', 'err'); return; }
+  try { await window.ufoShare.whenReady(); }
+  catch { _setShareMsg('匿名ログインに失敗しました', 'err'); return; }
+
+  const title = (document.getElementById('shareUpTitle').value || '').trim();
+  if (!title) { _setShareMsg('タイトルを入力してください', 'err'); return; }
+  if (title.length > 80) { _setShareMsg('タイトルは 80 文字以内で', 'err'); return; }
+
+  const author = (document.getElementById('shareUpAuthor').value || '').trim() || 'anonymous';
+  if (author.length > 40) { _setShareMsg('作者名は 40 文字以内で', 'err'); return; }
+
+  const description = (document.getElementById('shareUpDesc').value || '').trim();
+  if (description.length > 500) { _setShareMsg('説明は 500 文字以内で', 'err'); return; }
+
+  const tags = (document.getElementById('shareUpTags').value || '')
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t.length > 0 && t.length <= 20)
+    .slice(0, 10);
+
+  const source = document.getElementById('shareUpSource').value;
+  let steps, loop;
+
+  if (source === 'editor') {
+    if (!editorSteps || editorSteps.length === 0) {
+      _setShareMsg('Pattern Editor に波形がありません', 'err');
+      return;
+    }
+    steps = _normalizeSteps(editorSteps);
+    loop = !!editorLoop;
+  } else {
+    const fileEl = document.getElementById('shareUpFile');
+    const f = fileEl.files && fileEl.files[0];
+    if (!f) { _setShareMsg('JSON ファイルを選択してください', 'err'); return; }
+    try {
+      const text = await f.text();
+      const data = JSON.parse(text);
+      steps = _normalizeSteps(data.steps || []);
+      loop = !!data.loop;
+      if (steps.length === 0) { _setShareMsg('JSON に steps がありません', 'err'); return; }
+    } catch (e) {
+      _setShareMsg('JSON 読み込みエラー: ' + (e.message || e), 'err');
+      return;
+    }
+  }
+
+  if (steps.length > 200) { _setShareMsg('ステップ数は 200 以内で', 'err'); return; }
+
+  const durationSec = Math.round(steps.reduce((s, x) => s + x.duration, 0) * 10) / 10;
+
+  _setShareMsg('投稿中…');
+  try {
+    await window.ufoShare.post({
+      title,
+      author,
+      description,
+      tags,
+      steps,
+      loop,
+      stepCount: steps.length,
+      durationSec,
+    });
+    _setShareMsg('投稿しました ✓', 'ok');
+    document.getElementById('shareUpTitle').value = '';
+    document.getElementById('shareUpTags').value = '';
+    document.getElementById('shareUpDesc').value = '';
+    const fileEl = document.getElementById('shareUpFile');
+    if (fileEl) fileEl.value = '';
+  } catch (e) {
+    console.error('Share post failed', e);
+    const code = e.code || '';
+    const msg = code === 'permission-denied'
+      ? 'サーバーに拒否されました (権限エラー)'
+      : '投稿に失敗しました: ' + (e.message || code);
+    _setShareMsg(msg, 'err');
+  }
+}
+
+async function deleteShareItem(id) {
+  if (!confirm('この投稿を削除しますか？\n(他のユーザーからも消えます)')) return;
+  try {
+    await window.ufoShare.deleteViaAdmin(id);
+    shareCache = shareCache.filter(d => d.id !== id);
+    renderShareList();
+  } catch (e) {
+    alert('削除に失敗しました: ' + (e.message || e));
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+connectWS();
+</script>
+</body>
+</html>

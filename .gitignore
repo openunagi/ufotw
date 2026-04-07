@@ -1,0 +1,63 @@
+# ── Secrets ────────────────────────────────────────────────
+# Never commit Firebase admin SDK service-account keys
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+serviceAccountKey*.json
+firebase-admin*.json
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# ── Python ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+build/
+dist/
+
+# ── Android ────────────────────────────────────────────────
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/build/
+android/build/
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+*.iml
+*.hprof
+
+# Android signing — never commit keystores
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# ── Firebase CLI ───────────────────────────────────────────
+.firebase/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# ── Editors / OS ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ── Claude Code ────────────────────────────────────────────
+.claude/
+CLAUDE.md

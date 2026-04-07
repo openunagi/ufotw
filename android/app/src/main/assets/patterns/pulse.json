@@ -1,0 +1,13 @@
+{
+  "emoji": "⚡",
+  "description": "短く鋭いパルス",
+  "loop": true,
+  "steps": [
+    {"speed": 90, "direction": 0, "duration": 0.22},
+    {"speed": 0,  "direction": 0, "duration": 0.28},
+    {"speed": 90, "direction": 0, "duration": 0.22},
+    {"speed": 0,  "direction": 0, "duration": 0.28},
+    {"speed": 90, "direction": 0, "duration": 0.22},
+    {"speed": 0,  "direction": 0, "duration": 0.80}
+  ]
+}

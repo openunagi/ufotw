@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="UFO TW">
+  <title>UFO TW Remote</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #1a1a1a;
+      --primary: #3388ff;
+      --error: #ff3333;
+      --text: #e0e0e0;
+      --muted: #a0a0a0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100dvh;
+    }
+
+    .screen { display: none; flex-direction: column; min-height: 100dvh; padding: 24px 16px; }
+    .screen.active { display: flex; }
+
+    /* Entry */
+    #entryScreen { justify-content: center; align-items: center; gap: 20px; }
+    .logo { font-size: 28px; font-weight: 700; letter-spacing: 0.1em; }
+    .subtitle { color: var(--muted); font-size: 13px; }
+
+    input[type="text"] {
+      background: var(--surface);
+      border: 1px solid #333;
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 14px 16px;
+      text-align: center;
+      text-transform: uppercase;
+      width: 100%;
+      max-width: 320px;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--primary); }
+    input[type="text"]::placeholder { color: #444; font-weight: 400; font-size: 14px; letter-spacing: 0; }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px 24px;
+      width: 100%;
+      max-width: 320px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { opacity: 0.75; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-stop {
+      background: var(--error);
+      color: #fff;
+      font-size: 22px;
+      max-width: none;
+      padding: 18px;
+    }
+
+    .error-msg { color: var(--error); font-size: 13px; text-align: center; }
+
+    /* Control */
+    #controlScreen { gap: 12px; padding-top: 16px; }
+
+    header {
+      display: flex;
+      align-items: center;
+      padding-bottom: 4px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .room-label {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .card-title {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .dir-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .dir-btn {
+      background: transparent;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      flex: 1;
+      font-size: 14px;
+      padding: 10px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dir-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    input[type="range"] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+    .speed-val { font-size: 22px; font-weight: 700; width: 44px; text-align: right; }
+
+    .link-group { display: flex; gap: 6px; }
+    .link-btn {
+      background: transparent;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      flex: 1;
+      font-size: 13px;
+      padding: 10px 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .link-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .link-desc { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+    .card.dimmed { opacity: 0.35; pointer-events: none; }
+
+    /* Patterns */
+    .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: transparent;
+      border: 1px solid #444;
+      border-radius: 20px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px 14px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  </style>
+</head>
+<body>
+
+<!-- Entry Screen -->
+<div id="entryScreen" class="screen active">
+  <div class="logo">UFO TW</div>
+  <div class="subtitle">リモートコントローラー</div>
+  <input type="text" id="roomCodeInput" placeholder="ルームコード（例: SAKURA-7429）"
+         autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+  <div id="errorMsg" class="error-msg" style="display:none"></div>
+  <button class="btn btn-primary" onclick="connect()">接続</button>
+</div>
+
+<!-- Control Screen -->
+<div id="controlScreen" class="screen">
+  <header>
+    <button class="back-btn" onclick="disconnect()">← 戻る</button>
+    <span class="room-label" id="headerCode"></span>
+  </header>
+
+  <button class="btn btn-stop" onclick="stopAll()">STOP</button>
+
+  <div class="card" id="rotor1Card">
+    <div class="card-title">ROTOR 1</div>
+    <div class="dir-group">
+      <button class="dir-btn active" id="cw1" onclick="setDir(1,0)">↻ CW</button>
+      <button class="dir-btn" id="ccw1" onclick="setDir(1,1)">↺ CCW</button>
+    </div>
+    <div class="slider-row">
+      <input type="range" id="slider1" min="0" max="100" value="0" oninput="onSlider(1)">
+      <div class="speed-val" id="speed1Val">0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">LINK</div>
+    <div class="link-group">
+      <button class="link-btn active" id="linkOff" onclick="setLink('off')">独立</button>
+      <button class="link-btn" id="linkSync" onclick="setLink('sync')">同期</button>
+      <button class="link-btn" id="linkMirror" onclick="setLink('mirror')">反転</button>
+    </div>
+    <div class="link-desc" id="linkDesc">ロータ 1・2 を個別に操作</div>
+  </div>
+
+  <div class="card" id="rotor2Card">
+    <div class="card-title">ROTOR 2</div>
+    <div class="dir-group">
+      <button class="dir-btn active" id="cw2" onclick="setDir(2,0)">↻ CW</button>
+      <button class="dir-btn" id="ccw2" onclick="setDir(2,1)">↺ CCW</button>
+    </div>
+    <div class="slider-row">
+      <input type="range" id="slider2" min="0" max="100" value="0" oninput="onSlider(2)">
+      <div class="speed-val" id="speed2Val">0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">PATTERNS</div>
+    <div class="chip-group" id="chipGroup"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyA-UzffNY0byxlAOf7Zq77Ov4X2FWlFmK4",
+  projectId: "ufotwcontrol",
+  databaseURL: "https://ufotwcontrol-default-rtdb.asia-southeast1.firebasedatabase.app",
+});
+const db = getDatabase(app);
+
+// ── State ──────────────────────────────────────────────────────────────────
+
+let dbRef = null;
+let speed1 = 0, dir1 = 0, speed2 = 0, dir2 = 0;
+let linkMode = "off";
+
+const PATTERNS = [
+  { name: "wave",                label: "Wave" },
+  { name: "pulse",               label: "Pulse" },
+  { name: "heartbeat",           label: "Heartbeat" },
+  { name: "gentle",              label: "Gentle" },
+  { name: "breath",              label: "Breath" },
+  { name: "surge",               label: "Surge" },
+  { name: "storm",               label: "Storm" },
+  { name: "pleasure",            label: "Pleasure" },
+  { name: "tide",                label: "Tide" },
+  { name: "escalate",            label: "Escalate" },
+  { name: "tease",               label: "Tease" },
+  { name: "smooth_wave_refined", label: "Smooth Wave" },
+  { name: "comfort_cycle",       label: "Comfort" },
+];
+
+let patternJob = null;
+let currentPattern = null;
+
+// ── Pattern Engine ─────────────────────────────────────────────────────────
+
+async function playPattern(name) {
+  stopPattern();
+  currentPattern = name;
+  setActiveChip(name);
+
+  const { steps, loop } = await fetch(`patterns/${name}.json`).then(r => r.json());
+  let cancelled = false;
+  patternJob = { cancel: () => { cancelled = true; } };
+
+  (async () => {
+    do {
+      for (const step of steps) {
+        if (cancelled || !dbRef) return;
+        const d2 = linkMode === "mirror" ? 1 - step.direction : step.direction;
+        set(dbRef, { speed1: step.speed, dir1: step.direction,
+                     speed2: step.speed, dir2: d2 });
+        await new Promise(r => setTimeout(r, step.duration * 1000));
+      }
+    } while (loop && !cancelled);
+    if (!cancelled && dbRef) set(dbRef, { speed1: 0, dir1: 0, speed2: 0, dir2: 0 });
+    patternJob = null;
+    currentPattern = null;
+    setActiveChip(null);
+  })();
+}
+
+function stopPattern() {
+  patternJob?.cancel();
+  patternJob = null;
+  currentPattern = null;
+  setActiveChip(null);
+}
+
+function setActiveChip(name) {
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  if (name) document.getElementById("chip-" + name)?.classList.add("active");
+}
+
+function buildChips() {
+  const group = document.getElementById("chipGroup");
+  group.innerHTML = "";
+  PATTERNS.forEach(({ name, label }) => {
+    const btn = document.createElement("button");
+    btn.className = "chip";
+    btn.id = "chip-" + name;
+    btn.textContent = label;
+    btn.onclick = () => currentPattern === name ? stopPattern() : playPattern(name);
+    group.appendChild(btn);
+  });
+}
+
+// ── Connection ─────────────────────────────────────────────────────────────
+
+window.connect = function () {
+  const raw = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+  if (!/^[A-Z]+-\d{4}$/.test(raw)) {
+    showError("形式が違います（例: SAKURA-7429）");
+    return;
+  }
+  hideError();
+  dbRef = ref(db, `rooms/${raw}/command`);
+  document.getElementById("headerCode").textContent = raw;
+  buildChips();
+  showScreen("controlScreen");
+};
+
+window.disconnect = function () {
+  stopPattern();
+  if (dbRef) set(dbRef, { speed1: 0, dir1: 0, speed2: 0, dir2: 0 });
+  dbRef = null;
+  resetControls();
+  showScreen("entryScreen");
+};
+
+// ── Controls ───────────────────────────────────────────────────────────────
+
+window.stopAll = function () {
+  stopPattern();
+  speed1 = speed2 = 0;
+  document.getElementById("slider1").value = 0;
+  document.getElementById("slider2").value = 0;
+  document.getElementById("speed1Val").textContent = "0";
+  document.getElementById("speed2Val").textContent = "0";
+  send();
+};
+
+window.setDir = function (rotor, dir) {
+  if (rotor === 1) {
+    dir1 = dir;
+    document.getElementById("cw1").classList.toggle("active", dir === 0);
+    document.getElementById("ccw1").classList.toggle("active", dir === 1);
+  } else {
+    dir2 = dir;
+    document.getElementById("cw2").classList.toggle("active", dir === 0);
+    document.getElementById("ccw2").classList.toggle("active", dir === 1);
+  }
+  send();
+};
+
+window.onSlider = function (rotor) {
+  if (rotor === 1) {
+    speed1 = +document.getElementById("slider1").value;
+    document.getElementById("speed1Val").textContent = speed1;
+  } else {
+    speed2 = +document.getElementById("slider2").value;
+    document.getElementById("speed2Val").textContent = speed2;
+  }
+  send();
+};
+
+window.setLink = function (mode) {
+  linkMode = mode;
+  ["off", "sync", "mirror"].forEach(m =>
+    document.getElementById("link" + m[0].toUpperCase() + m.slice(1))
+      .classList.toggle("active", m === mode)
+  );
+  document.getElementById("rotor2Card").classList.toggle("dimmed", mode !== "off");
+  document.getElementById("linkDesc").textContent = {
+    off:    "ロータ 1・2 を個別に操作",
+    sync:   "ロータ 2 がロータ 1 と同じ方向で連動",
+    mirror: "ロータ 2 がロータ 1 と逆方向で連動",
+  }[mode];
+  send();
+};
+
+function send() {
+  if (!dbRef) return;
+  let s2 = speed2, d2 = dir2;
+  if (linkMode === "sync")   { s2 = speed1; d2 = dir1; }
+  if (linkMode === "mirror") { s2 = speed1; d2 = 1 - dir1; }
+  set(dbRef, { speed1, dir1, speed2: s2, dir2: d2 });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function resetControls() {
+  speed1 = speed2 = dir1 = dir2 = 0;
+  document.getElementById("slider1").value = 0;
+  document.getElementById("slider2").value = 0;
+  document.getElementById("speed1Val").textContent = "0";
+  document.getElementById("speed2Val").textContent = "0";
+  document.getElementById("cw1").classList.add("active");
+  document.getElementById("ccw1").classList.remove("active");
+  document.getElementById("cw2").classList.add("active");
+  document.getElementById("ccw2").classList.remove("active");
+  setLink("off");
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function showError(msg) {
+  const el = document.getElementById("errorMsg");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+function hideError() {
+  document.getElementById("errorMsg").style.display = "none";
+}
+
+document.getElementById("roomCodeInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") window.connect();
+});
+
+// Pre-fill room code from ?room= query param
+const roomParam = new URLSearchParams(location.search).get("room");
+if (roomParam) {
+  document.getElementById("roomCodeInput").value = roomParam.toUpperCase();
+}
+</script>
+</body>
+</html>

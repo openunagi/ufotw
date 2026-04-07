@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="UFO TW 共有広場">
+  <meta name="theme-color" content="#071414">
+  <title>UFO TW 共有広場</title>
+  <style>
+    :root {
+      --bg: #071414;
+      --surface: #0b1a1a;
+      --surface2: #0e1f1f;
+      --border: #1a3838;
+      --cyan: #22ddcc;
+      --warm: #ff8800;
+      --text: #e8e8e8;
+      --muted: #5a7070;
+      --error: #ff4455;
+      --ok: #33ff88;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Helvetica Neue", Arial, sans-serif;
+      min-height: 100dvh;
+      overscroll-behavior: none;
+    }
+    body {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 8px 14px 40px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 2px 8px;
+    }
+    h1 {
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+    }
+    .uid-badge {
+      font-size: 0.6rem;
+      color: var(--muted);
+      font-family: ui-monospace, Menlo, monospace;
+    }
+
+    /* ── Tabs ─────────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 7px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn.active {
+      background: var(--surface2);
+      color: var(--cyan);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Draw Tab ─────────────────────────────────────────────────── */
+    .draw-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ctrl-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-right: 4px;
+    }
+    .pill-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 11px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 999px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+    }
+    .pill-btn.active {
+      background: var(--cyan);
+      color: #001414;
+      border-color: var(--cyan);
+    }
+    .pill-btn:active { transform: scale(0.97); }
+
+    .rec-btn {
+      flex: 1;
+      background: var(--surface);
+      border: 2px solid var(--cyan);
+      color: var(--cyan);
+      padding: 11px 22px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      border-radius: 999px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .rec-btn:active { transform: scale(0.98); }
+    .rec-btn.recording {
+      background: var(--error);
+      color: #fff;
+      border-color: var(--error);
+      animation: rec-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes rec-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 85, 0.55); }
+      50%      { box-shadow: 0 0 0 10px rgba(255, 68, 85, 0); }
+    }
+
+    .loop-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .loop-label input { width: 16px; height: 16px; accent-color: var(--cyan); }
+
+    .draw-canvas-wrap {
+      position: relative;
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      margin-bottom: 8px;
+    }
+    .canvas-scroll {
+      width: 100%;
+      /* Take as much vertical space as possible. The subtraction accounts
+         for the chrome above (header + tabs + draw-controls + body padding)
+         and below (scroll-bar + action-row + a small breathing margin). */
+      height: clamp(360px, calc(100dvh - 270px), 640px);
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 6px;
+      background: #050f0f;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .canvas-scroll::-webkit-scrollbar { height: 6px; }
+    .canvas-scroll::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    canvas.draw-canvas {
+      display: block;
+      height: 100%;
+      /* width and internal height are both set dynamically in JS */
+      touch-action: none;
+    }
+    .draw-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      pointer-events: none;
+      letter-spacing: 0.05em;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .draw-hint.hidden { display: none; }
+
+    .scroll-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .scroll-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .scroll-btn:active { transform: scale(0.96); }
+    .total-dur-badge {
+      flex: 1;
+      text-align: center;
+      font-size: 0.74rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+    .total-dur-badge strong {
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-right: 2px;
+    }
+
+    .draw-action-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .action-btn {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn.primary {
+      background: var(--cyan);
+      color: #001414;
+      border-color: var(--cyan);
+    }
+
+    /* ── Form ─────────────────────────────────────────────────────── */
+    .form-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .form-section label {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+      margin-top: 10px;
+    }
+    .form-section label:first-child { margin-top: 0; }
+    .form-section input[type="text"],
+    .form-section textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 10px 12px;
+      outline: none;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .form-section input:focus,
+    .form-section textarea:focus { border-color: var(--cyan); }
+
+    .submit-btn {
+      margin-top: 16px;
+      width: 100%;
+      background: var(--cyan);
+      color: #001414;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .submit-btn:active { transform: scale(0.98); }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .msg {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      min-height: 1em;
+      text-align: center;
+    }
+    .msg.ok  { color: var(--ok); }
+    .msg.err { color: var(--error); }
+
+    /* ── Browse Tab ───────────────────────────────────────────────── */
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 11px 14px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--cyan); }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 30px 20px;
+      font-size: 0.82rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .card-author {
+      font-size: 0.7rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    canvas.preview-canvas {
+      width: 100%;
+      max-width: 100%;
+      height: 48px;
+      display: block;
+      background: #050f0f;
+      border-radius: 6px;
+      margin: 6px 0;
+    }
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 6px 0;
+    }
+    .tag-chip {
+      font-size: 0.65rem;
+      color: var(--cyan);
+      background: rgba(34, 221, 204, 0.08);
+      border: 1px solid rgba(34, 221, 204, 0.25);
+      border-radius: 10px;
+      padding: 2px 8px;
+    }
+    .card-meta {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin: 4px 0;
+    }
+    .card-desc {
+      font-size: 0.78rem;
+      color: #bcbcbc;
+      margin: 4px 0 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .card-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .card-btn:hover { background: #173030; border-color: var(--cyan); color: var(--cyan); }
+
+    footer {
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 30px;
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌐 UFO TW 共有広場</h1>
+  <span class="uid-badge" id="uidBadge">…</span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabDrawBtn" onclick="switchTab('draw')">🖌 描く</button>
+  <button class="tab-btn"        id="tabBrowseBtn" onclick="switchTab('browse')">📖 広場</button>
+</div>
+
+<!-- ── Draw Tab ───────────────────────────────────────────────────── -->
+<div class="tab-panel active" id="tabDraw">
+
+  <div class="draw-controls">
+    <button class="rec-btn" id="recBtn" onclick="toggleRecording()">● 録音開始</button>
+    <label class="loop-label">
+      <input type="checkbox" id="loopChk"> Loop
+    </label>
+  </div>
+
+  <div class="draw-canvas-wrap">
+    <div class="canvas-scroll" id="canvasScroll">
+      <canvas class="draw-canvas" id="drawCanvas" width="750" height="400"></canvas>
+    </div>
+    <div class="draw-hint" id="drawHint">[● 録音開始] を押してから<br>canvas を上下に動かして波形を作る<br>↑ = 時計回り (CW)　↓ = 反時計回り (CCW)</div>
+  </div>
+
+  <div class="scroll-bar">
+    <button class="scroll-btn" onclick="scrollByPx(-300)">◀ 戻る</button>
+    <div class="total-dur-badge">総時間 <strong id="totalDurBadge">0.0</strong>秒</div>
+    <button class="scroll-btn" onclick="scrollByPx(300)">進む ▶</button>
+  </div>
+
+  <div class="draw-action-row">
+    <button class="action-btn" onclick="clearDraw()">↺ クリア</button>
+    <button class="action-btn" onclick="previewDraw()">▶ プレビュー</button>
+  </div>
+
+  <div class="form-section">
+    <label for="titleInput">タイトル <span style="color:var(--error)">*</span></label>
+    <input type="text" id="titleInput" maxlength="80" placeholder="例: deep slow wave">
+
+    <label for="authorInput">作者名 (任意)</label>
+    <input type="text" id="authorInput" maxlength="40" placeholder="省略で anonymous">
+
+    <label for="tagsInput">タグ (カンマ区切り・任意)</label>
+    <input type="text" id="tagsInput" placeholder="例: slow, wave, teasing">
+
+    <label for="descInput">説明 (任意)</label>
+    <textarea id="descInput" maxlength="500" rows="2" placeholder="どんな波形か一言"></textarea>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitDraw()">📤 投稿する</button>
+    <div class="msg" id="postMsg"></div>
+  </div>
+</div>
+
+<!-- ── Browse Tab ─────────────────────────────────────────────────── -->
+<div class="tab-panel" id="tabBrowse">
+  <input type="text" class="search-input" id="searchInput"
+         placeholder="🔍 タイトル / 作者 / タグで検索"
+         oninput="renderCardList()">
+  <div class="card-list" id="cardList">
+    <div class="empty">接続中…</div>
+  </div>
+</div>
+
+<footer>
+  UFO TW Pattern Share Plaza · anonymous sign-in required to post
+</footer>
+
+<!-- ── Firebase Module ──────────────────────────────────────────── -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import {
+  getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: 'AIzaSyA-UzffNY0byxlAOf7Zq77Ov4X2FWlFmK4',
+  authDomain: 'ufotwcontrol.firebaseapp.com',
+  projectId: 'ufotwcontrol',
+});
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const col  = collection(db, 'shared_patterns');
+
+let _uid = null;
+let _authResolve;
+const _authReady = new Promise(res => { _authResolve = res; });
+onAuthStateChanged(auth, user => {
+  if (user) {
+    _uid = user.uid;
+    _authResolve(user.uid);
+    const badge = document.getElementById('uidBadge');
+    if (badge) badge.textContent = user.uid.slice(0, 6) + '…';
+  }
+});
+signInAnonymously(auth).catch(e => {
+  console.error('Anon sign-in failed', e);
+  const msg = document.getElementById('postMsg');
+  if (msg) {
+    msg.textContent = '匿名ログインに失敗: ' + (e.message || e.code);
+    msg.className = 'msg err';
+  }
+});
+
+window.ufoShare = {
+  whenReady() { return _authReady; },
+  get uid() { return _uid; },
+  subscribe(cb) {
+    return onSnapshot(query(col, orderBy('createdAt', 'desc'), limit(50)), snap => {
+      cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, err => {
+      console.error('Share feed error:', err);
+      const list = document.getElementById('cardList');
+      if (list) list.innerHTML =
+        '<div class="empty">読み込みエラー: ' + (err.code || err.message) + '</div>';
+    });
+  },
+  async post(data) {
+    await _authReady;
+    return addDoc(col, { ...data, authorUid: _uid, createdAt: serverTimestamp() });
+  },
+};
+window.dispatchEvent(new Event('ufoShareReady'));
+</script>
+
+<!-- ── UI Logic ─────────────────────────────────────────────────── -->
+<script>
+// ── State ─────────────────────────────────────────────────────────
+let currentTab = 'draw';
+// samples are recorded as { t: seconds, y: signedSpeed in [-100, 100] }.
+// y > 0  → CW  (direction 0)   y < 0  → CCW (direction 1)   y === 0 → stop
+let samples    = [];
+let cardCache  = [];
+let subscribed = false;
+
+// ── Recording state ───────────────────────────────────────────────
+let recording = false;
+let recordStartedAt = 0;        // performance.now() ms
+let pointerSignedSpeed = 0;     // current value being recorded (held even when finger lifts)
+let pointerDown = false;
+let recordRaf = null;
+
+// Horizontal-scrolling canvas: a fixed pixel-per-second density and a
+// virtual duration that grows as the user draws further to the right.
+const PX_PER_SEC = 50;
+const INITIAL_DUR = 15;     // seconds — wide enough to be a useful starting canvas
+const EXTEND_BY  = 15;      // seconds — how much we add when the drawing nears the end
+const EXTEND_THRESHOLD_PX = 80;
+const AUTO_SCROLL_ZONE_PX = 80;
+const MARGIN_L = 28;
+const MARGIN_R = 12;
+const MARGIN_T = 12;
+const MARGIN_B = 24;
+
+// Canvas internal height is sized to match its rendered CSS height (driven by
+// .canvas-scroll's clamp() rule), so coordinates stay 1:1 in CSS pixels even
+// when the user rotates the device or resizes the window.
+let canvasH = 280;
+let DRAW_H  = canvasH - MARGIN_T - MARGIN_B;
+
+let virtualDur = INITIAL_DUR;
+const canvas = document.getElementById('drawCanvas');
+const scrollWrap = document.getElementById('canvasScroll');
+const ctx    = canvas.getContext('2d');
+
+function canvasPxWidth() { return MARGIN_L + virtualDur * PX_PER_SEC + MARGIN_R; }
+function drawW() { return virtualDur * PX_PER_SEC; }
+
+function resizeCanvas() {
+  // Setting width or height clears the canvas, so the caller should redraw().
+  const w = canvasPxWidth();
+  if (canvas.width !== w) {
+    canvas.width = w;
+    canvas.style.width = w + 'px';
+  }
+}
+
+// Read the rendered CSS height of the canvas (set by the .canvas-scroll CSS
+// clamp rule) and apply it as the canvas internal height. Called on load,
+// resize, and orientationchange so the recording surface scales to the device.
+function syncCanvasHeight() {
+  const cssH = scrollWrap.clientHeight;
+  if (cssH > 0 && Math.abs(cssH - canvasH) > 1) {
+    canvasH = cssH;
+    canvas.height = cssH;
+    DRAW_H = canvasH - MARGIN_T - MARGIN_B;
+    redraw();
+  }
+}
+
+resizeCanvas();
+// Initial sync after layout settles. We use rAF to be sure CSS has applied.
+requestAnimationFrame(() => { syncCanvasHeight(); redraw(); });
+window.addEventListener('resize', syncCanvasHeight);
+window.addEventListener('orientationchange', () => {
+  // Wait one frame so the new viewport metrics are settled.
+  requestAnimationFrame(syncCanvasHeight);
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabDraw').classList.toggle('active',   tab === 'draw');
+  document.getElementById('tabBrowse').classList.toggle('active', tab === 'browse');
+  document.getElementById('tabDrawBtn').classList.toggle('active',   tab === 'draw');
+  document.getElementById('tabBrowseBtn').classList.toggle('active', tab === 'browse');
+  if (tab === 'browse') initBrowse();
+}
+
+// ── Canvas / time mapping ────────────────────────────────────────
+function clientToCanvas(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width  / rect.width);
+  const y = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  return { x, y };
+}
+
+// Map canvas Y to a signed speed in [-100, 100].
+// Top of draw area = +100 (CW max), center = 0 (stop), bottom = -100 (CCW max).
+function canvasYToSignedSpeed(y) {
+  const cy = Math.max(MARGIN_T, Math.min(MARGIN_T + DRAW_H, y));
+  return (1 - 2 * (cy - MARGIN_T) / DRAW_H) * 100;
+}
+
+// Inverse: signed speed -> canvas y.
+function signedSpeedToCanvasY(signedSpeed) {
+  const v = Math.max(-100, Math.min(100, signedSpeed));
+  return MARGIN_T + (1 - (v + 100) / 200) * DRAW_H;
+}
+
+function tToCanvasX(t) {
+  return MARGIN_L + t * PX_PER_SEC;
+}
+
+function maxSampleT() {
+  let m = 0;
+  for (const s of samples) if (s.t > m) m = s.t;
+  return m;
+}
+
+function updateTotalDurBadge() {
+  const m = maxSampleT();
+  document.getElementById('totalDurBadge').textContent = m.toFixed(1);
+}
+
+// Make the canvas long enough to accommodate samples up to `tMax + lookahead`.
+// Returns true if the canvas was extended (caller should redraw).
+function ensureCapacity(tMax) {
+  const needed = Math.ceil(tMax + 5); // 5s lookahead so the user has room
+  if (needed <= virtualDur) return false;
+  // Round up to next EXTEND_BY boundary so we don't resize on every pixel
+  virtualDur = Math.max(needed, virtualDur + EXTEND_BY);
+  resizeCanvas();
+  return true;
+}
+
+function autoScrollDuringDraw(canvasX) {
+  // Convert canvas-space x to wrapper-scrollLeft target.
+  // The wrapper's scrollLeft is in CSS pixels which equal canvas internal pixels
+  // since we set canvas.style.width = canvas.width + 'px'.
+  const visibleRight = scrollWrap.scrollLeft + scrollWrap.clientWidth;
+  if (canvasX > visibleRight - AUTO_SCROLL_ZONE_PX) {
+    scrollWrap.scrollLeft = canvasX - scrollWrap.clientWidth + AUTO_SCROLL_ZONE_PX;
+  }
+}
+
+function scrollByPx(dx) {
+  scrollWrap.scrollLeft += dx;
+}
+
+// ── Pointer handlers ─────────────────────────────────────────────
+// Pointer events update `pointerSignedSpeed` only — actual sampling happens
+// inside the requestAnimationFrame recording loop. When the finger lifts the
+// last value persists.
+canvas.addEventListener('pointerdown', e => {
+  if (!recording) return;
+  e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch {}
+  pointerDown = true;
+  const { y } = clientToCanvas(e);
+  pointerSignedSpeed = canvasYToSignedSpeed(y);
+}, { passive: false });
+
+canvas.addEventListener('pointermove', e => {
+  if (!recording || !pointerDown) return;
+  e.preventDefault();
+  const { y } = clientToCanvas(e);
+  pointerSignedSpeed = canvasYToSignedSpeed(y);
+}, { passive: false });
+
+function _endPointer(e) {
+  if (!pointerDown) return;
+  pointerDown = false;
+  try { canvas.releasePointerCapture(e.pointerId); } catch {}
+}
+canvas.addEventListener('pointerup',     _endPointer);
+canvas.addEventListener('pointercancel', _endPointer);
+canvas.addEventListener('pointerleave',  _endPointer);
+
+function hideDrawHint() {
+  document.getElementById('drawHint').classList.add('hidden');
+}
+
+function redraw() {
+  const W = canvas.width;
+  const centerY = MARGIN_T + DRAW_H / 2;
+
+  // Background
+  ctx.fillStyle = '#050f0f';
+  ctx.fillRect(0, 0, W, canvasH);
+
+  // Horizontal grid lines: ±100/75/50/25/0
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 1;
+  for (const pct of [100, 75, 50, 25, 0, -25, -50, -75, -100]) {
+    const y = signedSpeedToCanvasY(pct);
+    if (pct === 0) {
+      // Center "stop" line: brighter and thicker so the split is obvious
+      ctx.strokeStyle = 'rgba(150, 200, 200, 0.45)';
+      ctx.lineWidth = 2;
+    } else {
+      ctx.strokeStyle = 'rgba(34, 221, 204, 0.07)';
+      ctx.lineWidth = 1;
+    }
+    ctx.beginPath();
+    ctx.moveTo(MARGIN_L, y);
+    ctx.lineTo(MARGIN_L + drawW(), y);
+    ctx.stroke();
+    // Label only the major ticks
+    if (pct === 100 || pct === 50 || pct === 0 || pct === -50 || pct === -100) {
+      ctx.fillStyle = pct > 0 ? 'rgba(255, 136, 0, 0.85)'
+                    : pct < 0 ? 'rgba(34, 221, 204, 0.85)'
+                              : 'rgba(150, 200, 200, 0.7)';
+      const label = pct === 100 ? '↻100'
+                  : pct === -100 ? '↺100'
+                  : Math.abs(pct).toString();
+      ctx.fillText(label, MARGIN_L - 4, y);
+    }
+  }
+
+  // Time ticks
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.lineWidth = 1;
+  for (let t = 0; t <= virtualDur; t += 1) {
+    const x = tToCanvasX(t);
+    const major = t % 5 === 0;
+    ctx.strokeStyle = major ? 'rgba(34, 221, 204, 0.13)' : 'rgba(34, 221, 204, 0.04)';
+    ctx.beginPath();
+    ctx.moveTo(x, MARGIN_T);
+    ctx.lineTo(x, MARGIN_T + DRAW_H);
+    ctx.stroke();
+    if (major) {
+      ctx.fillStyle = 'rgba(90, 112, 112, 0.9)';
+      ctx.fillText(t + 's', x, MARGIN_T + DRAW_H + 4);
+    }
+  }
+
+  // Waveform — drawn as colored segments. Each segment is colored by the
+  // sign of the average of its two endpoints (warm = CW, cyan = CCW).
+  if (samples.length > 1) {
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < samples.length - 1; i++) {
+      const a = samples[i], b = samples[i + 1];
+      const avg = (a.y + b.y) / 2;
+      ctx.strokeStyle = avg >= 0 ? '#ff8800' : '#22ddcc';
+      ctx.beginPath();
+      ctx.moveTo(tToCanvasX(a.t), signedSpeedToCanvasY(a.y));
+      ctx.lineTo(tToCanvasX(b.t), signedSpeedToCanvasY(b.y));
+      ctx.stroke();
+    }
+    // Subtle fill from waveform to center line
+    ctx.beginPath();
+    ctx.moveTo(tToCanvasX(samples[0].t), centerY);
+    for (const s of samples) {
+      ctx.lineTo(tToCanvasX(s.t), signedSpeedToCanvasY(s.y));
+    }
+    ctx.lineTo(tToCanvasX(samples[samples.length - 1].t), centerY);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(34, 221, 204, 0.06)';
+    ctx.fill();
+  }
+}
+
+redraw();
+updateTotalDurBadge();
+
+// Draw the recording playhead — a vertical red line at the current record time.
+function drawRecordingPlayhead(t) {
+  const x = tToCanvasX(t);
+  ctx.strokeStyle = 'rgba(255, 68, 85, 0.95)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, MARGIN_T);
+  ctx.lineTo(x, MARGIN_T + DRAW_H);
+  ctx.stroke();
+  // Small filled circle at the current input value, so the user can see
+  // where their finger value is being recorded.
+  ctx.fillStyle = '#ff4455';
+  ctx.beginPath();
+  ctx.arc(x, signedSpeedToCanvasY(pointerSignedSpeed), 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── Recording loop ───────────────────────────────────────────────
+function toggleRecording() {
+  if (recording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  // Always start fresh — clear previous samples.
+  samples = [];
+  pointerSignedSpeed = 0;
+  pointerDown = false;
+  virtualDur = INITIAL_DUR;
+  resizeCanvas();
+  scrollWrap.scrollLeft = 0;
+  hideDrawHint();
+  recording = true;
+  recordStartedAt = performance.now();
+  const btn = document.getElementById('recBtn');
+  btn.textContent = '■ 録音停止';
+  btn.classList.add('recording');
+  recordTick();
+}
+
+function recordTick() {
+  if (!recording) return;
+  const now = performance.now();
+  const t = (now - recordStartedAt) / 1000;
+  ensureCapacity(t);
+  samples.push({ t, y: pointerSignedSpeed });
+  redraw();
+  drawRecordingPlayhead(t);
+  autoScrollDuringDraw(tToCanvasX(t));
+  updateTotalDurBadge();
+  recordRaf = requestAnimationFrame(recordTick);
+}
+
+function stopRecording() {
+  recording = false;
+  if (recordRaf) { cancelAnimationFrame(recordRaf); recordRaf = null; }
+  pointerDown = false;
+  const btn = document.getElementById('recBtn');
+  btn.textContent = '● 録音開始';
+  btn.classList.remove('recording');
+  redraw();
+}
+
+// ── Clear / Preview ──────────────────────────────────────────────
+function clearDraw() {
+  // Cancel an in-progress recording first.
+  if (recording) stopRecording();
+  samples = [];
+  pointerSignedSpeed = 0;
+  pointerDown = false;
+  virtualDur = INITIAL_DUR;
+  resizeCanvas();
+  scrollWrap.scrollLeft = 0;
+  document.getElementById('drawHint').classList.remove('hidden');
+  redraw();
+  updateTotalDurBadge();
+}
+
+let previewRaf = null;
+function previewDraw() {
+  if (samples.length === 0) return;
+  if (previewRaf) cancelAnimationFrame(previewRaf);
+  const playDur = Math.max(0.5, maxSampleT());
+  const start = performance.now();
+  function tick(now) {
+    const elapsed = (now - start) / 1000;
+    redraw();
+    if (elapsed > playDur) { previewRaf = null; return; }
+    const x = MARGIN_L + elapsed * PX_PER_SEC;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, MARGIN_T);
+    ctx.lineTo(x, MARGIN_T + DRAW_H);
+    ctx.stroke();
+    // Auto-scroll the playhead into view
+    const visibleRight = scrollWrap.scrollLeft + scrollWrap.clientWidth;
+    if (x > visibleRight - 60 || x < scrollWrap.scrollLeft + 20) {
+      scrollWrap.scrollLeft = Math.max(0, x - scrollWrap.clientWidth / 2);
+    }
+    previewRaf = requestAnimationFrame(tick);
+  }
+  previewRaf = requestAnimationFrame(tick);
+}
+
+// ── Samples → Steps ──────────────────────────────────────────────
+// Input samples have y in [-100, 100] (signed speed). Output steps use
+// {speed: 0..100, direction: 0|1, duration}. Direction 0 = CW (positive
+// signed), direction 1 = CCW (negative signed). Zero is direction 0 with
+// speed 0 (stop).
+function samplesToSteps(samples, totalDur, gridDt) {
+  gridDt = gridDt || 0.2;
+  const N = Math.max(1, Math.round(totalDur / gridDt));
+  const buckets = [];
+  for (let i = 0; i < N; i++) buckets.push([]);
+  for (const s of samples) {
+    const idx = Math.min(N - 1, Math.max(0, Math.floor(s.t / gridDt)));
+    buckets[idx].push(s.y);
+  }
+  const cells = buckets.map(b => b.length ? b.reduce((a, b) => a + b, 0) / b.length : null);
+
+  let firstIdx = -1, lastIdx = -1;
+  for (let i = 0; i < N; i++) if (cells[i] !== null) { firstIdx = i; break; }
+  for (let i = N - 1; i >= 0; i--) if (cells[i] !== null) { lastIdx = i; break; }
+  if (firstIdx < 0) return [];
+
+  for (let i = 0; i < firstIdx; i++) cells[i] = cells[firstIdx];
+  for (let i = lastIdx + 1; i < N; i++) cells[i] = cells[lastIdx];
+
+  // Linear interpolate internal nulls
+  let i = firstIdx;
+  while (i <= lastIdx) {
+    if (cells[i] !== null) { i++; continue; }
+    let j = i;
+    while (j <= lastIdx && cells[j] === null) j++;
+    const a = cells[i - 1], b = cells[j];
+    for (let k = i; k < j; k++) {
+      const t = (k - i + 1) / (j - i + 1);
+      cells[k] = a + (b - a) * t;
+    }
+    i = j;
+  }
+
+  // Convert to {speed, direction} per cell, quantize speed to 5 increments.
+  const cellsSD = cells.map(v => {
+    const clamped = Math.max(-100, Math.min(100, v));
+    const direction = clamped >= 0 ? 0 : 1;
+    const speed = Math.round(Math.abs(clamped) / 5) * 5;
+    // Speed 0 collapses to a canonical (direction 0) so merging works
+    return { speed, direction: speed === 0 ? 0 : direction };
+  });
+
+  // Merge consecutive cells with the same (speed, direction).
+  const steps = [];
+  for (const c of cellsSD) {
+    const last = steps[steps.length - 1];
+    if (last && last.speed === c.speed && last.direction === c.direction) {
+      last.duration = Math.round((last.duration + gridDt) * 100) / 100;
+    } else {
+      steps.push({ speed: c.speed, direction: c.direction, duration: gridDt });
+    }
+  }
+  return steps;
+}
+
+// ── Submit ───────────────────────────────────────────────────────
+function setMsg(text, cls) {
+  const el = document.getElementById('postMsg');
+  el.textContent = text || '';
+  el.className = 'msg' + (cls ? ' ' + cls : '');
+}
+
+async function submitDraw() {
+  setMsg('');
+  if (!window.ufoShare) { setMsg('Firebase 初期化中です', 'err'); return; }
+  try { await window.ufoShare.whenReady(); }
+  catch { setMsg('匿名ログインに失敗しました', 'err'); return; }
+
+  const title = (document.getElementById('titleInput').value || '').trim();
+  if (!title) { setMsg('タイトルを入力してください', 'err'); return; }
+  if (title.length > 80) { setMsg('タイトルは 80 文字以内で', 'err'); return; }
+
+  const author = (document.getElementById('authorInput').value || '').trim() || 'anonymous';
+  if (author.length > 40) { setMsg('作者名は 40 文字以内で', 'err'); return; }
+
+  const description = (document.getElementById('descInput').value || '').trim();
+  if (description.length > 500) { setMsg('説明は 500 文字以内で', 'err'); return; }
+
+  const tags = (document.getElementById('tagsInput').value || '')
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t.length > 0 && t.length <= 20)
+    .slice(0, 10);
+
+  if (recording) stopRecording();
+  if (samples.length < 2) { setMsg('まだ録音していません', 'err'); return; }
+
+  const loop = document.getElementById('loopChk').checked;
+  const drawnDur = maxSampleT();
+  if (drawnDur < 0.4) { setMsg('もう少し長く録音してください', 'err'); return; }
+  const steps = samplesToSteps(samples, drawnDur, 0.2);
+  if (steps.length === 0) { setMsg('波形が読み取れませんでした', 'err'); return; }
+  if (steps.length > 500) { setMsg('ステップ数が多すぎます (最大 500)', 'err'); return; }
+
+  const durationSec = Math.round(steps.reduce((s, x) => s + x.duration, 0) * 10) / 10;
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  setMsg('投稿中…');
+
+  try {
+    await window.ufoShare.post({
+      title, author, description, tags,
+      steps, loop,
+      stepCount: steps.length,
+      durationSec,
+    });
+    setMsg('投稿しました ✓', 'ok');
+    // Clear the form but keep the drawing so the user can see what they posted
+    document.getElementById('titleInput').value = '';
+    document.getElementById('tagsInput').value = '';
+    document.getElementById('descInput').value = '';
+    // Auto-switch to browse so they can see their post at the top
+    setTimeout(() => { switchTab('browse'); setMsg(''); }, 900);
+  } catch (e) {
+    console.error('Post failed', e);
+    const code = e.code || '';
+    const msg = code === 'permission-denied'
+      ? 'サーバーに拒否されました (権限エラー)'
+      : '投稿に失敗しました: ' + (e.message || code);
+    setMsg(msg, 'err');
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+// ── Browse Tab ──────────────────────────────────────────────────
+function initBrowse() {
+  if (subscribed) return;
+  if (!window.ufoShare) {
+    window.addEventListener('ufoShareReady', initBrowse, { once: true });
+    return;
+  }
+  subscribed = true;
+  window.ufoShare.subscribe(docs => {
+    cardCache = docs;
+    renderCardList();
+  });
+}
+
+function renderCardList() {
+  const list = document.getElementById('cardList');
+  if (!list) return;
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  const filtered = q
+    ? cardCache.filter(d => {
+        const hay = [d.title || '', d.author || '', (d.tags || []).join(' ')].join(' ').toLowerCase();
+        return hay.includes(q);
+      })
+    : cardCache;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">' +
+      (cardCache.length === 0 ? 'まだ投稿がありません' : '一致する波形が見つかりません') +
+      '</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  for (const doc of filtered) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const head = document.createElement('div');
+    head.className = 'card-head';
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.textContent = doc.title || '(untitled)';
+    const author = document.createElement('div');
+    author.className = 'card-author';
+    author.textContent = 'by ' + (doc.author || 'anonymous');
+    head.appendChild(title);
+    head.appendChild(author);
+    card.appendChild(head);
+
+    const prev = document.createElement('canvas');
+    prev.className = 'preview-canvas';
+    prev.width = 480;
+    prev.height = 96;
+    card.appendChild(prev);
+    requestAnimationFrame(() => drawPreview(prev, doc.steps || [], !!doc.loop));
+
+    if (doc.tags && doc.tags.length) {
+      const tagRow = document.createElement('div');
+      tagRow.className = 'tag-row';
+      for (const t of doc.tags) {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.textContent = '#' + t;
+        tagRow.appendChild(chip);
+      }
+      card.appendChild(tagRow);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'card-meta';
+    const stepCount = doc.stepCount != null ? doc.stepCount : (doc.steps ? doc.steps.length : 0);
+    const durSec = doc.durationSec != null ? doc.durationSec :
+      (doc.steps || []).reduce((s, x) => s + (x.duration || 0), 0);
+    meta.textContent = stepCount + ' steps · ' + durSec.toFixed(1) + 's' + (doc.loop ? ' · loop' : '');
+    card.appendChild(meta);
+
+    if (doc.description) {
+      const desc = document.createElement('div');
+      desc.className = 'card-desc';
+      desc.textContent = doc.description;
+      card.appendChild(desc);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'card-btn';
+    dlBtn.textContent = '💾 JSON ダウンロード';
+    dlBtn.onclick = () => downloadJson(doc);
+    actions.appendChild(dlBtn);
+    card.appendChild(actions);
+
+    list.appendChild(card);
+  }
+}
+
+function drawPreview(canvas, steps, loop) {
+  const c = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = '#050f0f';
+  c.fillRect(0, 0, W, H);
+  if (!steps || steps.length === 0) return;
+  const total = steps.reduce((s, x) => s + Math.max(0.01, x.duration || 0), 0);
+  if (total <= 0) return;
+  let x = 0;
+  for (const s of steps) {
+    const dur = Math.max(0.01, s.duration || 0);
+    const w = (dur / total) * W;
+    const speed = Math.max(0, Math.min(100, s.speed || 0));
+    const h = (speed / 100) * (H - 6);
+    const dir = s.direction === 1 ? 1 : 0;
+    c.fillStyle = dir === 0 ? 'rgba(255,136,0,0.85)' : 'rgba(34,221,204,0.85)';
+    c.fillRect(x, H - h - 3, Math.max(1, w - 0.5), h);
+    x += w;
+  }
+  c.strokeStyle = '#1a3838';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(0, H - 3);
+  c.lineTo(W, H - 3);
+  c.stroke();
+  if (loop) {
+    c.fillStyle = 'rgba(34,221,204,0.9)';
+    c.font = 'bold 16px system-ui, sans-serif';
+    c.textAlign = 'right';
+    c.textBaseline = 'top';
+    c.fillText('↻', W - 6, 4);
+  }
+}
+
+function downloadJson(doc) {
+  const payload = {
+    steps: (doc.steps || []).map(s => ({
+      speed: Number(s.speed) || 0,
+      direction: Number(s.direction) === 1 ? 1 : 0,
+      duration: Number(s.duration) || 0.2,
+    })),
+    loop: !!doc.loop,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (doc.title || 'pattern').replace(/[^\w\-]+/g, '_').slice(0, 40) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+</script>
+
+</body>
+</html>

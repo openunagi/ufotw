@@ -1,0 +1,14 @@
+{
+  "emoji": "💨",
+  "description": "ゆっくりした呼吸のような波",
+  "loop": true,
+  "steps": [
+    {"speed": 0,  "direction": 0, "duration": 0.8},
+    {"speed": 15, "direction": 0, "duration": 1.4},
+    {"speed": 35, "direction": 0, "duration": 1.4},
+    {"speed": 55, "direction": 0, "duration": 1.4},
+    {"speed": 35, "direction": 0, "duration": 1.4},
+    {"speed": 15, "direction": 0, "duration": 1.4},
+    {"speed": 0,  "direction": 0, "duration": 0.8}
+  ]
+}

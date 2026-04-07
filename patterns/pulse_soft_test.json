@@ -1,0 +1,13 @@
+{
+  "loop": true,
+  "steps": [
+    {"speed": 24, "direction": 0, "duration": 0.45},
+    {"speed": 8,  "direction": 0, "duration": 0.85},
+    {"speed": 26, "direction": 0, "duration": 0.45},
+    {"speed": 8,  "direction": 0, "duration": 0.85},
+    {"speed": 28, "direction": 1, "duration": 0.45},
+    {"speed": 10, "direction": 1, "duration": 0.9},
+    {"speed": 22, "direction": 0, "duration": 0.5},
+    {"speed": 0,  "direction": 0, "duration": 1.2}
+  ]
+}

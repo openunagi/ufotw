@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "969115975637",
+    "project_id": "ufotwcontrol",
+    "storage_bucket": "ufotwcontrol.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:969115975637:android:14530c6e2b862fac4a075c",
+        "android_client_info": {
+          "package_name": "com.first.ufotw"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-UzffNY0byxlAOf7Zq77Ov4X2FWlFmK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

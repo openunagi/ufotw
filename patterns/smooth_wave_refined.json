@@ -1,0 +1,19 @@
+{
+  "loop": true,
+  "steps": [
+    {"speed": 6,  "direction": 0, "duration": 2.2},
+    {"speed": 10, "direction": 0, "duration": 2.0},
+    {"speed": 14, "direction": 0, "duration": 2.0},
+    {"speed": 18, "direction": 0, "duration": 1.8},
+    {"speed": 22, "direction": 0, "duration": 1.8},
+    {"speed": 26, "direction": 0, "duration": 1.6},
+    {"speed": 22, "direction": 0, "duration": 1.8},
+    {"speed": 18, "direction": 0, "duration": 2.0},
+    {"speed": 12, "direction": 1, "duration": 1.8},
+    {"speed": 16, "direction": 1, "duration": 1.8},
+    {"speed": 20, "direction": 1, "duration": 1.8},
+    {"speed": 16, "direction": 1, "duration": 1.8},
+    {"speed": 10, "direction": 1, "duration": 1.8},
+    {"speed": 6,  "direction": 0, "duration": 2.0}
+  ]
+}

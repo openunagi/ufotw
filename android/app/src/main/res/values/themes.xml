@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.UfoTw" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#3388ff</item>
+        <item name="colorSecondary">#aa55ff</item>
+        <item name="colorError">#ff3333</item>
+
+        <!-- サーフェス系カラーを中性グレーで上書き（青みの除去） -->
+        <item name="android:windowBackground">#0a0a0a</item>
+        <item name="android:colorBackground">#0a0a0a</item>
+        <item name="colorSurface">#121212</item>
+        <item name="colorSurfaceVariant">#1e1e1e</item>
+        <item name="colorOnSurface">#e0e0e0</item>
+        <item name="colorOnSurfaceVariant">#a0a0a0</item>
+        <item name="colorSurfaceContainer">#1a1a1a</item>
+        <item name="colorSurfaceContainerLow">#141414</item>
+        <item name="colorSurfaceContainerHigh">#222222</item>
+        <item name="colorSurfaceContainerHighest">#2c2c2c</item>
+        <item name="android:statusBarColor">#0a0a0a</item>
+        <item name="android:navigationBarColor">#0a0a0a</item>
+    </style>
+</resources>
