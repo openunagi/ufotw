@@ -1,6 +1,6 @@
 # UFO TW Controller
 
-VORZE U.F.O. TW（成人向けBLEデバイス）をMacからリモート操作するための非公式ツール。
+VORZE U.F.O. TWをMac/Androidからリモート操作するための非公式ツール。
 
 - **Python CLI / FastAPI サーバー** — BLE接続、Web UI、REST/WebSocket API、LINE Webhook
 - **Android アプリ (Kotlin)** — 同じプロトコルでBLE直結、Firebase経由のリモートセッション対応
@@ -58,13 +58,6 @@ pip install -r requirements.txt
    ```bash
    export FIREBASE_ADMIN_CREDENTIALS=$HOME/.config/ufo-tw/firebase-admin.json
    ```
-
-LINE Bot 連携も使う場合:
-
-```bash
-export LINE_CHANNEL_SECRET=<your-line-channel-secret>
-export LINE_CHANNEL_ACCESS_TOKEN=<your-line-channel-token>
-```
 
 ---
 
@@ -152,7 +145,7 @@ Speed カード内の `[Smooth]` トグルをONにすると、スライダーを
 
 ### Drift（揺らぎ） ← NEW
 
-「同じ刺激が続くと神経が慣れて感覚が薄れる」問題への対策。微小な変化を加え続けることで知覚を維持する。
+微小な変化を加え続けることで知覚を維持する。
 
 #### Speed Drift
 
@@ -167,7 +160,7 @@ Speed カード内の `[Smooth]` トグルをONにすると、スライダーを
 - Smooth と併用可能（Smooth のターゲットに対してノイズを乗せる）
 - Perceptual Mode と併用可能
 
-#### Groove（D'Angelo型ドラッグ）
+#### Groove
 
 パターン再生時にタイミングを**一貫して遅らせる**。ランダムなブレではなく、一定の「重力感」。
 
