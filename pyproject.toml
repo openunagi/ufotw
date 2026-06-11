@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ufo-tw-controller"
-version = "1.0.0"
+version = "1.0.1"
 description = "Unofficial VORZE U.F.O. TW BLE controller — CLI + FastAPI server + pattern engine"
 readme = "README.md"
 license = { file = "LICENSE" }
