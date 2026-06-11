@@ -11,6 +11,24 @@ VORZE U.F.O. TWをMac/Androidからリモート操作するための非公式ツ
 
 ---
 
+## かんたんインストール
+
+開発環境なしで使い始める最短ルート:
+
+| 使いたいもの | 入手方法 |
+|---|---|
+| **Android アプリ** | [Releases](https://github.com/openunagi/ufotw/releases) から最新の `ufo-tw-controller-*.apk` をダウンロードしてインストール（下記参照） |
+| **リモート操作画面（PWA）** | ブラウザで <https://ufotwcontrol.web.app> を開くだけ。Android アプリが表示するルームコードを入力して接続 |
+| **Mac サーバー / CLI** | [セットアップ](#セットアップ) の手順で `git clone` → `pip install` |
+
+### Android APK のインストール手順
+
+1. Android 端末のブラウザで [Releases ページ](https://github.com/openunagi/ufotw/releases) を開き、最新の `.apk` をダウンロード
+2. ダウンロード完了通知をタップ → 「この提供元のアプリを許可」を求められたら許可（Google Play 外のアプリのため）
+3. インストール後、初回起動時に Bluetooth / 位置情報の権限を許可
+
+---
+
 ## 必要環境
 
 - macOS（CoreBluetooth 経由でBLE通信）
@@ -26,8 +44,8 @@ VORZE U.F.O. TWをMac/Androidからリモート操作するための非公式ツ
 ### 1. リポジトリをクローン
 
 ```bash
-git clone https://github.com/<your-account>/ufo-tw-controller.git
-cd ufo-tw-controller
+git clone https://github.com/openunagi/ufotw.git
+cd ufotw
 ```
 
 ### 2. Python 依存関係をインストール
@@ -35,8 +53,10 @@ cd ufo-tw-controller
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
+
+（`pip install -r requirements.txt` でも同じ。`-e .` は `pyproject.toml` 経由で依存関係を入れる）
 
 ### 3. macOS の Bluetooth 権限を許可
 
@@ -450,6 +470,8 @@ ufo-tw-controller/
 ├── run_pattern.py           # パターン単体実行スクリプト
 ├── debug_connect.py         # BLE 接続デバッグ用
 ├── requirements.txt
+├── pyproject.toml           # パッケージメタデータ（pip install -e . 用）
+├── .github/workflows/       # タグ push で APK を自動ビルド・Release 添付
 ├── ufo_tw/
 │   ├── ble.py               # BLE スキャン・接続・送信
 │   ├── protocol.py          # コマンド生成・UUID定義
@@ -479,6 +501,19 @@ ufo-tw-controller/
 
 `android/` 以下に Kotlin で書かれた Android クライアントが入っている。BLE で直接デバイスを操作する単体クライアントとして動作し、Firebase Realtime Database を使った遠隔セッション機能も搭載している。
 
+### インストール（ビルド不要）
+
+[Releases](https://github.com/openunagi/ufotw/releases) に各バージョンの APK が添付されている。タグ（`v*`）を push すると GitHub Actions（`.github/workflows/android-release.yml`）が自動でビルドして Release に添付する。
+
+リリース署名鍵を使う場合は、リポジトリの Secrets に以下を設定する（未設定の場合はデバッグ署名でビルドされる）:
+
+| Secret | 内容 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | keystore ファイルを `base64` エンコードしたもの |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore のパスワード |
+| `ANDROID_KEY_ALIAS` | キーのエイリアス |
+| `ANDROID_KEY_PASSWORD` | キーのパスワード |
+
 ### ビルド方法
 
 ```bash
@@ -488,6 +523,15 @@ cd android
 ```
 
 成果物: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+リリースビルドはローカルでも環境変数（上記 Secrets と同名）か `android/keystore.properties` で署名できる:
+
+```properties
+storeFile=/path/to/release.keystore
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
 
 ### Firebase の設定（任意）
 

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ufo-tw-controller"
+version = "1.0.0"
+description = "Unofficial VORZE U.F.O. TW BLE controller — CLI + FastAPI server + pattern engine"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["ble", "bluetooth", "vorze", "ufo-tw"]
+dependencies = [
+    "bleak>=0.21.0",
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "httpx>=0.24.0",
+    "firebase-admin>=6.5.0",
+]
+
+[project.urls]
+Repository = "https://github.com/openunagi/ufotw"
+Issues = "https://github.com/openunagi/ufotw/issues"
+
+# NOTE: the server resolves static/ and patterns/ relative to the repository
+# root, so install in editable mode from a clone: `pip install -e .`
+[tool.setuptools]
+packages = ["ufo_tw"]
