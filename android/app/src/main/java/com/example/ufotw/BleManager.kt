@@ -21,6 +21,8 @@ class BleManager(private val context: Context) : BleSender {
 
     var onStateChanged: ((State) -> Unit)? = null
     var onDeviceFound: ((BluetoothDevice) -> Unit)? = null
+    var onScanTimeout: (() -> Unit)? = null
+    var onWriteFailed: (() -> Unit)? = null
 
     private val bluetoothManager =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -45,6 +47,12 @@ class BleManager(private val context: Context) : BleSender {
     fun isBluetoothEnabled() = adapter.isEnabled
 
     // ── Scan ──────────────────────────────────────────────────────────────────
+
+    private val scanTimeoutRunnable = Runnable {
+        val wasScanning = _state == State.SCANNING
+        stopScan()
+        if (wasScanning) onScanTimeout?.invoke()
+    }
 
     fun startScan() {
         state = State.SCANNING
@@ -71,12 +79,11 @@ class BleManager(private val context: Context) : BleSender {
         scanCallback = cb
         scanner.startScan(null, settings, cb)
 
-        mainHandler.postDelayed({
-            stopScan()
-        }, SCAN_TIMEOUT_MS)
+        mainHandler.postDelayed(scanTimeoutRunnable, SCAN_TIMEOUT_MS)
     }
 
     fun stopScan() {
+        mainHandler.removeCallbacks(scanTimeoutRunnable)
         scanCallback?.let { adapter.bluetoothLeScanner?.stopScan(it) }
         scanCallback = null
         if (_state == State.SCANNING) state = State.DISCONNECTED
@@ -110,10 +117,19 @@ class BleManager(private val context: Context) : BleSender {
     }
 
     private fun doWrite(bytes: ByteArray) {
-        val g = gatt ?: run { synchronized(this) { isWriting = false }; return }
-        val ch = txChar ?: run { synchronized(this) { isWriting = false }; return }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeCharacteristic(ch, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        val g = gatt ?: run {
+            synchronized(this) { isWriting = false }
+            mainHandler.post { onWriteFailed?.invoke() }
+            return
+        }
+        val ch = txChar ?: run {
+            synchronized(this) { isWriting = false }
+            mainHandler.post { onWriteFailed?.invoke() }
+            return
+        }
+        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            g.writeCharacteristic(ch, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
+                BluetoothStatusCodes.SUCCESS
         } else {
             @Suppress("DEPRECATION")
             ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
@@ -121,6 +137,10 @@ class BleManager(private val context: Context) : BleSender {
             ch.value = bytes
             @Suppress("DEPRECATION")
             g.writeCharacteristic(ch)
+        }
+        if (!ok) {
+            synchronized(this) { isWriting = false }
+            mainHandler.post { onWriteFailed?.invoke() }
         }
     }
 
@@ -146,6 +166,10 @@ class BleManager(private val context: Context) : BleSender {
         override fun onCharacteristicWrite(
             gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int
         ) {
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e(TAG, "Write failed: status=$status")
+                mainHandler.post { onWriteFailed?.invoke() }
+            }
             val next = synchronized(this@BleManager) {
                 val p = pendingWrite; pendingWrite = null; isWriting = p != null; p
             }

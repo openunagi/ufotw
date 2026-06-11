@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
@@ -21,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.first.ufotw.databinding.ActivityMainBinding
 import com.google.android.material.chip.Chip
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -39,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     enum class AppMode { NONE, LOCAL, REMOTE }
     private var appMode = AppMode.NONE
     private var remoteSession: RemoteSession? = null
+    private var remoteRoomCode: String = ""
 
     // Plaza fields
     private lateinit var sharedPlazaRepo: SharedPlazaRepository
@@ -60,10 +63,18 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    // リモート受信インジケーター非表示用
+    // リモート受信インジケーター非表示用（最後の受信から一定時間で消える）
     private val hideIndicatorRunnable = Runnable {
         binding.tvRemoteIndicator.visibility = View.GONE
+        updateConnectionStatus()
     }
+
+    companion object {
+        private const val REMOTE_INDICATOR_TIMEOUT_MS = 4000L
+    }
+
+    // 送信失敗 Snackbar の連打防止
+    private var sendFailureSnackbarShowing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -121,6 +132,8 @@ class MainActivity : AppCompatActivity() {
         binding.layoutControls.visibility = View.GONE
         binding.layoutPlaza.visibility = View.GONE
         binding.toolbar.subtitle = ""
+        binding.progressScan.visibility = View.GONE
+        updateConnectionStatus()
     }
 
     private fun goBackToModeSelect() {
@@ -143,13 +156,17 @@ class MainActivity : AppCompatActivity() {
         binding.layoutRoomCode.visibility = View.VISIBLE
         binding.layoutRoomInput.visibility = View.GONE
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        updateConnectionStatus()
         startScanWithPermission()
     }
 
     private fun enterRemoteMode(roomCode: String) {
         appMode = AppMode.REMOTE
+        remoteRoomCode = roomCode
         remoteSession = RemoteSession(roomCode)
-        val sender = FirebaseSender(roomCode)
+        val sender = FirebaseSender(roomCode).apply {
+            onSendFailed = { showSendFailureSnackbar() }
+        }
         patternEngine = PatternEngine(this, sender).also {
             it.isMirrorMode = { isMirror }
             it.onPatternChanged = { name -> updatePatternChips(name) }
@@ -165,6 +182,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutControls.visibility = View.VISIBLE
         binding.toolbar.subtitle = "リモート: $roomCode"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        updateConnectionStatus()
     }
 
     // ── メニュー ──────────────────────────────────────────────────────────────
@@ -193,8 +211,14 @@ class MainActivity : AppCompatActivity() {
                 BleManager.State.CONNECTING   -> showConnecting()
                 BleManager.State.CONNECTED    -> showConnected()
             }
+            updateConnectionStatus()
         }
         ble.onDeviceFound = { device -> ble.connect(device) }
+        ble.onScanTimeout = {
+            binding.progressScan.visibility = View.GONE
+            showSnackbar("デバイスが見つかりませんでした。電源を確認して再試行してください")
+        }
+        ble.onWriteFailed = { showSendFailureSnackbar() }
         patternEngine.onPatternChanged = { name ->
             updatePatternChips(name)
             if (name == null) stopPlayhead()
@@ -252,6 +276,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnStopAll.setOnClickListener {
+            // STOP: パターン停止 + 両ロータ停止 + スライダーリセットを一括で行う
             patternEngine.stop()
             speed1 = 0; speed2 = 0
             sendCommand()
@@ -262,25 +287,34 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnStopPattern.setOnClickListener {
+            // パターンのみ停止（回転速度は維持しない＝0送信で停止する）
             patternEngine.stop()
         }
 
         binding.toggleDir1.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
+            interruptPatternIfPlaying()
             dir1 = if (checkedId == R.id.btnCw1) UfoTwProtocol.CW else UfoTwProtocol.CCW
             sendCommand()
         }
         binding.slider1.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) { speed1 = value.toInt(); binding.tvSpeed1.text = "$speed1"; sendCommand() }
+            if (fromUser) {
+                interruptPatternIfPlaying()
+                speed1 = value.toInt(); binding.tvSpeed1.text = "$speed1"; sendCommand()
+            }
         }
 
         binding.toggleDir2.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
+            interruptPatternIfPlaying()
             dir2 = if (checkedId == R.id.btnCw2) UfoTwProtocol.CW else UfoTwProtocol.CCW
             sendCommand()
         }
         binding.slider2.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) { speed2 = value.toInt(); binding.tvSpeed2.text = "$speed2"; sendCommand() }
+            if (fromUser) {
+                interruptPatternIfPlaying()
+                speed2 = value.toInt(); binding.tvSpeed2.text = "$speed2"; sendCommand()
+            }
         }
 
         binding.toggleLink.addOnButtonCheckedListener { _, _, _ ->
@@ -308,6 +342,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * パターン再生中にスライダー・方向ボタンが操作されたら、
+     * 手動操作を優先してパターンを停止する（操作の干渉を防ぐ）。
+     */
+    private fun interruptPatternIfPlaying() {
+        if (patternEngine.currentPattern != null) {
+            patternEngine.stop()
+            showSnackbar("パターンを停止しました")
+        }
+    }
+
     private fun setRotor2Enabled(enabled: Boolean) {
         binding.toggleDir2.isEnabled = enabled
         binding.btnCw2.isEnabled = enabled
@@ -323,8 +368,75 @@ class MainActivity : AppCompatActivity() {
         binding.tvSpeed1.text = "$a1 $s1"
         binding.tvSpeed2.text = "$a2 $s2"
         binding.tvRemoteIndicator.visibility = View.VISIBLE
+        // 受信が続く間は表示し続け、最後の受信から一定時間後に消える
         binding.tvRemoteIndicator.removeCallbacks(hideIndicatorRunnable)
-        binding.tvRemoteIndicator.postDelayed(hideIndicatorRunnable, 1500)
+        binding.tvRemoteIndicator.postDelayed(hideIndicatorRunnable, REMOTE_INDICATOR_TIMEOUT_MS)
+        updateConnectionStatus(remoteActive = true)
+    }
+
+    // ── Snackbar 通知 ─────────────────────────────────────────────────────────
+
+    private fun showSnackbar(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+    }
+
+    /** 送信失敗の通知（連続失敗時に連打しないようデバウンスする） */
+    private fun showSendFailureSnackbar() {
+        if (sendFailureSnackbarShowing) return
+        sendFailureSnackbarShowing = true
+        Snackbar.make(binding.root, "送信に失敗しました", Snackbar.LENGTH_SHORT)
+            .addCallback(object : Snackbar.Callback() {
+                override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                    sendFailureSnackbarShowing = false
+                }
+            })
+            .show()
+    }
+
+    // ── 接続状態インジケーター ───────────────────────────────────────────────────
+
+    private enum class StatusColor(val color: Int) {
+        CONNECTED(0xFF33CC66.toInt()),
+        SCANNING(0xFFFFAA00.toInt()),
+        REMOTE(0xFF3388FF.toInt()),
+        DISCONNECTED(0xFFFF3333.toInt())
+    }
+
+    private fun setStatusDot(color: StatusColor) {
+        val drawable = (binding.viewStatusDot.background as? GradientDrawable)
+            ?: GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                binding.viewStatusDot.background = this
+            }
+        drawable.setColor(color.color)
+    }
+
+    /**
+     * 接続状態（接続済み/切断/スキャン中/リモート）を色付きドット＋ラベルで常時表示する。
+     * ツールバー直下（AppBarLayout内）に配置しているためスクロールしても隠れない。
+     */
+    private fun updateConnectionStatus(remoteActive: Boolean = false) {
+        if (appMode == AppMode.NONE) {
+            binding.layoutConnectionStatus.visibility = View.GONE
+            return
+        }
+        binding.layoutConnectionStatus.visibility = View.VISIBLE
+
+        val (color, label) = when (appMode) {
+            AppMode.REMOTE -> {
+                if (remoteActive) StatusColor.REMOTE to "リモート操作受信中"
+                else StatusColor.REMOTE to "リモート: $remoteRoomCode"
+            }
+            AppMode.LOCAL -> when (ble.state) {
+                BleManager.State.CONNECTED  -> StatusColor.CONNECTED to "接続済み"
+                BleManager.State.CONNECTING -> StatusColor.SCANNING to "接続中…"
+                BleManager.State.SCANNING   -> StatusColor.SCANNING to "スキャン中…"
+                BleManager.State.DISCONNECTED -> StatusColor.DISCONNECTED to "切断"
+            }
+            AppMode.NONE -> StatusColor.DISCONNECTED to ""
+        }
+        setStatusDot(color)
+        binding.tvConnectionStatus.text = label
     }
 
     // ── パターンチップ生成 ────────────────────────────────────────────────────
@@ -439,6 +551,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnAction.text = "スキャン"
         binding.btnAction.isEnabled = true
         binding.btnAction.visibility = View.VISIBLE
+        binding.progressScan.visibility = View.GONE
         menu?.findItem(R.id.menuDisconnect)?.isVisible = false
         binding.layoutControls.visibility = View.GONE
     }
@@ -447,6 +560,7 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.subtitle = "スキャン中…"
         binding.btnAction.text = "キャンセル"
         binding.btnAction.visibility = View.VISIBLE
+        binding.progressScan.visibility = View.VISIBLE
         menu?.findItem(R.id.menuDisconnect)?.isVisible = false
     }
 
@@ -455,6 +569,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnAction.text = "接続中…"
         binding.btnAction.isEnabled = false
         binding.btnAction.visibility = View.VISIBLE
+        binding.progressScan.visibility = View.GONE
         menu?.findItem(R.id.menuDisconnect)?.isVisible = false
     }
 
@@ -462,6 +577,7 @@ class MainActivity : AppCompatActivity() {
         val roomCode = binding.tvRoomCode.text.toString()
         binding.toolbar.subtitle = "接続済み"
         binding.btnAction.visibility = View.GONE
+        binding.progressScan.visibility = View.GONE
         menu?.findItem(R.id.menuDisconnect)?.isVisible = true
         binding.layoutControls.visibility = View.VISIBLE
 

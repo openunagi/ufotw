@@ -9,6 +9,9 @@ class FirebaseSender(private val roomCode: String) : BleSender {
         private const val TAG = "FirebaseSender"
     }
 
+    /** Firebaseへの送信に失敗した際に通知するコールバック */
+    var onSendFailed: (() -> Unit)? = null
+
     private val ref = FirebaseDatabase
         .getInstance("https://ufotwcontrol-default-rtdb.asia-southeast1.firebasedatabase.app")
         .getReference("rooms/$roomCode/command")
@@ -25,6 +28,7 @@ class FirebaseSender(private val roomCode: String) : BleSender {
                   "speed2" to speed2, "dir2" to dir2)
         ).addOnFailureListener { e ->
             Log.e(TAG, "Firebase write failed: ${e.message}")
+            onSendFailed?.invoke()
         }
     }
 }
