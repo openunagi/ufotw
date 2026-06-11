@@ -5,8 +5,10 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 class UfoTwForegroundService : Service() {
 
@@ -18,7 +20,7 @@ class UfoTwForegroundService : Service() {
         fun start(context: Context, roomCode: String) {
             val intent = Intent(context, UfoTwForegroundService::class.java)
                 .putExtra(EXTRA_ROOM_CODE, roomCode)
-            context.startForegroundService(intent)
+            ContextCompat.startForegroundService(context, intent)
         }
 
         fun stop(context: Context) {
@@ -28,10 +30,12 @@ class UfoTwForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        val channel = NotificationChannel(
-            CHANNEL_ID, "UFO TW", NotificationManager.IMPORTANCE_LOW
-        ).apply { description = "バックグラウンド接続維持" }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID, "UFO TW", NotificationManager.IMPORTANCE_LOW
+            ).apply { description = "バックグラウンド接続維持" }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
