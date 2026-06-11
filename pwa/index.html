@@ -161,6 +161,24 @@
     .card.dimmed { opacity: 0.35; pointer-events: none; }
 
     /* Patterns */
+    .pattern-viz {
+      width: 100%;
+      height: 80px;
+      background: #050a14;
+      border-radius: 8px;
+      display: none;
+      margin-bottom: 12px;
+    }
+    .pattern-viz.active { display: block; }
+    .pattern-info {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+      display: none;
+      font-variant-numeric: tabular-nums;
+    }
+    .pattern-info.active { display: block; }
     .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
     .chip {
       background: transparent;
@@ -173,6 +191,76 @@
       -webkit-tap-highlight-color: transparent;
     }
     .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+    /* Touch Pad */
+    .touch-pad-wrap {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      height: clamp(280px, 62vh, 600px);
+    }
+    .touch-pad {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    .touch-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .touch-speed-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .snap-label {
+      font-size: 11px;
+      color: var(--muted);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-title.collapsible { cursor: pointer; }
+    .card-title.collapsible::after {
+      content: " ▾";
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .card-title.collapsible.collapsed::after { content: " ▸"; }
+    .card-body.collapsed {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height 0.25s ease, opacity 0.15s ease;
+    }
+    .card-body {
+      max-height: 500px;
+      opacity: 1;
+      transition: max-height 0.3s ease, opacity 0.2s ease 0.05s;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(8px);
+      background: rgba(40, 44, 52, 0.95);
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 20px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 100;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: rgba(180, 40, 40, 0.95); }
   </style>
 </head>
 <body>
@@ -230,11 +318,28 @@
     </div>
   </div>
 
+  <div class="card" id="patternCard">
+    <div class="card-title collapsible" id="patternTitle" onclick="togglePatternCard()">PATTERNS</div>
+    <div class="card-body" id="patternBody">
+      <canvas id="patternCanvas" class="pattern-viz"></canvas>
+      <div class="pattern-info" id="patternInfo"></div>
+      <div class="chip-group" id="chipGroup"></div>
+    </div>
+  </div>
+
   <div class="card">
-    <div class="card-title">PATTERNS</div>
-    <div class="chip-group" id="chipGroup"></div>
+    <div class="card-title">TOUCH PAD</div>
+    <div class="touch-pad-wrap" id="touchPadWrap">
+      <canvas class="touch-pad" id="touchPad"></canvas>
+    </div>
+    <div class="touch-footer">
+      <span class="touch-speed-label" id="touchLabel">タッチして上下にドラッグ</span>
+      <label class="snap-label"><input type="checkbox" id="snapStop" checked> 離すと停止</label>
+    </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -272,39 +377,235 @@ const PATTERNS = [
 let patternJob = null;
 let currentPattern = null;
 
+// ── Toast ──────────────────────────────────────────────────────────────────
+
+let toastTimer = null;
+function toast(msg, isError = false) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.toggle("error", isError);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), isError ? 3000 : 2000);
+}
+
+// Throttle error toasts so a burst of failed writes shows only one
+let lastSendErrorTime = 0;
+function reportSendError(err) {
+  console.error("send failed:", err);
+  const now = performance.now();
+  if (now - lastSendErrorTime < 3000) return;
+  lastSendErrorTime = now;
+  toast("送信に失敗しました。接続を確認してください", true);
+}
+
+// ── Pattern Visualization ──────────────────────────────────────────────────
+
+let vizCtx = null;
+let vizWidth = 0;
+let vizHeight = 0;
+let vizSteps = [];
+let vizTotal = 0;
+let vizLoop = false;
+
+function setupViz() {
+  const canvas = document.getElementById("patternCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const cssWidth = rect.width || (canvas.parentElement.offsetWidth - 32);
+  const cssHeight = 80;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
+  canvas.height = Math.floor(cssHeight * dpr);
+  vizCtx = canvas.getContext("2d");
+  vizCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  vizWidth = cssWidth;
+  vizHeight = cssHeight;
+}
+
+function drawVizShape() {
+  if (!vizCtx) return;
+  vizCtx.clearRect(0, 0, vizWidth, vizHeight);
+  vizCtx.fillStyle = "#050a14";
+  vizCtx.fillRect(0, 0, vizWidth, vizHeight);
+  if (!vizSteps.length || vizTotal <= 0) return;
+  let x = 0;
+  for (const s of vizSteps) {
+    const dur = Math.max(0.01, s.duration || 0);
+    const w = (dur / vizTotal) * vizWidth;
+    const speed = Math.max(0, Math.min(100, s.speed || 0));
+    const h = (speed / 100) * (vizHeight - 6);
+    const dir = s.direction === 1 ? 1 : 0;
+    vizCtx.fillStyle = dir === 0
+      ? "rgba(51,136,255,0.75)"
+      : "rgba(255,136,0,0.75)";
+    vizCtx.fillRect(x, vizHeight - h - 3, Math.max(1, w - 0.5), h);
+    x += w;
+  }
+  vizCtx.strokeStyle = "#1a2838";
+  vizCtx.lineWidth = 1;
+  vizCtx.beginPath();
+  vizCtx.moveTo(0, vizHeight - 3);
+  vizCtx.lineTo(vizWidth, vizHeight - 3);
+  vizCtx.stroke();
+  if (vizLoop) {
+    vizCtx.fillStyle = "rgba(51,136,255,0.85)";
+    vizCtx.font = "bold 14px system-ui, sans-serif";
+    vizCtx.textAlign = "right";
+    vizCtx.textBaseline = "top";
+    vizCtx.fillText("↻", vizWidth - 6, 4);
+  }
+}
+
+function drawVizCursor(progress) {
+  if (!vizCtx) return;
+  drawVizShape();
+  const x = Math.max(0, Math.min(vizWidth, progress * vizWidth));
+  vizCtx.strokeStyle = "rgba(255,255,255,0.95)";
+  vizCtx.lineWidth = 2;
+  vizCtx.beginPath();
+  vizCtx.moveTo(x, 0);
+  vizCtx.lineTo(x, vizHeight);
+  vizCtx.stroke();
+}
+
+function showViz() {
+  document.getElementById("patternCanvas").classList.add("active");
+  document.getElementById("patternInfo").classList.add("active");
+  setupViz();
+}
+
+function hideViz() {
+  document.getElementById("patternCanvas").classList.remove("active");
+  document.getElementById("patternInfo").classList.remove("active");
+  document.getElementById("patternInfo").textContent = "";
+}
+
+function updateInfo(name, stepIdx, step) {
+  const total = vizSteps.length;
+  const dirLabel = step.direction === 0 ? "CW" : "CCW";
+  document.getElementById("patternInfo").textContent =
+    `▶ ${name} · ${stepIdx + 1}/${total} · ${step.speed}% ${dirLabel}`;
+}
+
+function mirrorPatternToUi(step, d2) {
+  // Patterns drive BOTH rotors, so always mirror both to the UI
+  document.getElementById("slider1").value = step.speed;
+  document.getElementById("speed1Val").textContent = step.speed;
+  document.getElementById("cw1").classList.toggle("active", step.direction === 0);
+  document.getElementById("ccw1").classList.toggle("active", step.direction === 1);
+  document.getElementById("slider2").value = step.speed;
+  document.getElementById("speed2Val").textContent = step.speed;
+  document.getElementById("cw2").classList.toggle("active", d2 === 0);
+  document.getElementById("ccw2").classList.toggle("active", d2 === 1);
+  speed1 = step.speed; dir1 = step.direction;
+  speed2 = step.speed; dir2 = d2;
+}
+
+function setPatternTitle(label) {
+  // Keep the playing pattern visible even when the card is collapsed
+  document.getElementById("patternTitle").textContent =
+    label ? `PATTERNS · ▶ ${label}` : "PATTERNS";
+}
+
 // ── Pattern Engine ─────────────────────────────────────────────────────────
 
 async function playPattern(name) {
   stopPattern();
   currentPattern = name;
   setActiveChip(name);
+  setPatternTitle(PATTERNS.find(p => p.name === name)?.label ?? name);
+  document.getElementById("patternBody").classList.remove("collapsed");
+  document.getElementById("patternTitle").classList.remove("collapsed");
 
-  const { steps, loop } = await fetch(`patterns/${name}.json`).then(r => r.json());
+  let steps, loop;
+  try {
+    ({ steps, loop } = await fetch(`patterns/${name}.json`).then(r => r.json()));
+  } catch (err) {
+    console.error("pattern load failed:", err);
+    toast("パターンを読み込めませんでした", true);
+    stopPattern();
+    return;
+  }
+  if (!steps || steps.length === 0) { stopPattern(); return; }
+
+  vizSteps = steps;
+  vizLoop = !!loop;
+  vizTotal = steps.reduce((s, x) => s + Math.max(0.01, x.duration || 0), 0);
+
+  showViz();
+  drawVizShape();
+
   let cancelled = false;
-  patternJob = { cancel: () => { cancelled = true; } };
+  let rafId = null;
+  let lastStepIdx = -1;
+  const startTime = performance.now();
 
-  (async () => {
-    do {
-      for (const step of steps) {
-        if (cancelled || !dbRef) return;
-        const d2 = linkMode === "mirror" ? 1 - step.direction : step.direction;
-        set(dbRef, { speed1: step.speed, dir1: step.direction,
-                     speed2: step.speed, dir2: d2 });
-        await new Promise(r => setTimeout(r, step.duration * 1000));
-      }
-    } while (loop && !cancelled);
-    if (!cancelled && dbRef) set(dbRef, { speed1: 0, dir1: 0, speed2: 0, dir2: 0 });
-    patternJob = null;
-    currentPattern = null;
-    setActiveChip(null);
-  })();
+  patternJob = {
+    cancel: () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+    },
+  };
+
+  function tick(now) {
+    if (cancelled || !dbRef) return;
+    const elapsed = (now - startTime) / 1000;
+
+    if (!vizLoop && elapsed >= vizTotal) {
+      fbSend({ speed1: 0, dir1: 0, speed2: 0, dir2: 0 });
+      mirrorPatternToUi({ speed: 0, direction: 0 }, 0);
+      hideViz();
+      patternJob = null;
+      currentPattern = null;
+      setActiveChip(null);
+      setPatternTitle(null);
+      return;
+    }
+
+    const cyclePos = vizLoop ? (elapsed % vizTotal) : elapsed;
+
+    let acc = 0;
+    let stepIdx = 0;
+    for (let i = 0; i < steps.length; i++) {
+      acc += Math.max(0.01, steps[i].duration || 0);
+      if (cyclePos < acc) { stepIdx = i; break; }
+    }
+
+    if (stepIdx !== lastStepIdx) {
+      lastStepIdx = stepIdx;
+      const step = steps[stepIdx];
+      const d2 = linkMode === "mirror" ? 1 - step.direction : step.direction;
+      fbSend({ speed1: step.speed, dir1: step.direction,
+               speed2: step.speed, dir2: d2 });
+      mirrorPatternToUi(step, d2);
+      updateInfo(name, stepIdx, step);
+    }
+
+    drawVizCursor(cyclePos / vizTotal);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  rafId = requestAnimationFrame(tick);
 }
 
-function stopPattern() {
+window.togglePatternCard = function () {
+  document.getElementById("patternBody").classList.toggle("collapsed");
+  document.getElementById("patternTitle").classList.toggle("collapsed");
+};
+
+function stopPattern(stopRotors = false) {
+  const wasPlaying = patternJob !== null;
   patternJob?.cancel();
   patternJob = null;
   currentPattern = null;
   setActiveChip(null);
+  setPatternTitle(null);
+  hideViz();
+  if (stopRotors && wasPlaying) {
+    // Don't leave the device spinning at the last pattern step
+    mirrorPatternToUi({ speed: 0, direction: dir1 }, dir2);
+    fbSend({ speed1: 0, dir1, speed2: 0, dir2 });
+  }
 }
 
 function setActiveChip(name) {
@@ -320,7 +621,7 @@ function buildChips() {
     btn.className = "chip";
     btn.id = "chip-" + name;
     btn.textContent = label;
-    btn.onclick = () => currentPattern === name ? stopPattern() : playPattern(name);
+    btn.onclick = () => currentPattern === name ? stopPattern(true) : playPattern(name);
     group.appendChild(btn);
   });
 }
@@ -338,11 +639,13 @@ window.connect = function () {
   document.getElementById("headerCode").textContent = raw;
   buildChips();
   showScreen("controlScreen");
+  // Setup touch pad after control screen is visible (needs layout)
+  requestAnimationFrame(() => { setupTouchPad(); renderPad(); });
 };
 
 window.disconnect = function () {
   stopPattern();
-  if (dbRef) set(dbRef, { speed1: 0, dir1: 0, speed2: 0, dir2: 0 });
+  fbSend({ speed1: 0, dir1: 0, speed2: 0, dir2: 0 });
   dbRef = null;
   resetControls();
   showScreen("entryScreen");
@@ -357,6 +660,7 @@ window.stopAll = function () {
   document.getElementById("slider2").value = 0;
   document.getElementById("speed1Val").textContent = "0";
   document.getElementById("speed2Val").textContent = "0";
+  resetPad();
   send();
 };
 
@@ -399,17 +703,22 @@ window.setLink = function (mode) {
   send();
 };
 
-function send() {
+function fbSend(data) {
   if (!dbRef) return;
+  set(dbRef, data).catch(reportSendError);
+}
+
+function send() {
   let s2 = speed2, d2 = dir2;
   if (linkMode === "sync")   { s2 = speed1; d2 = dir1; }
   if (linkMode === "mirror") { s2 = speed1; d2 = 1 - dir1; }
-  set(dbRef, { speed1, dir1, speed2: s2, dir2: d2 });
+  fbSend({ speed1, dir1, speed2: s2, dir2: d2 });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function resetControls() {
+  resetPad();
   speed1 = speed2 = dir1 = dir2 = 0;
   document.getElementById("slider1").value = 0;
   document.getElementById("slider2").value = 0;
@@ -446,6 +755,311 @@ const roomParam = new URLSearchParams(location.search).get("room");
 if (roomParam) {
   document.getElementById("roomCodeInput").value = roomParam.toUpperCase();
 }
+
+// ── Touch Pad (real-time finger control) ──────────────────────────────────
+
+const touchCanvas = document.getElementById("touchPad");
+const touchWrap   = document.getElementById("touchPadWrap");
+let touchCtx, touchW, touchH;
+
+function setupTouchPad() {
+  const rect = touchWrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  touchCanvas.width  = Math.floor(rect.width * dpr);
+  touchCanvas.height = Math.floor(rect.height * dpr);
+  touchCtx = touchCanvas.getContext("2d");
+  touchCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  touchW = rect.width;
+  touchH = rect.height;
+}
+
+const PAD_MARGIN = 16;           // top/bottom dead zone in CSS px
+let padActive = false;           // finger is on the pad
+let padSignedSpeed = 0;          // current value: +100 (CW max) … -100 (CCW max)
+let lastPadSendTime = 0;
+const PAD_SEND_INTERVAL = 50;    // ms — throttle Firebase writes
+
+// Trail: ring buffer of recent speed values
+const TRAIL_DURATION = 8;        // seconds of history to show
+let trail = [];                  // [{t: performance.now() ms, v: signedSpeed}]
+let trailRaf = null;
+
+function padYToSpeed(clientY) {
+  const rect = touchCanvas.getBoundingClientRect();
+  const y = clientY - rect.top;
+  const usable = touchH - PAD_MARGIN * 2;
+  const ratio = Math.max(0, Math.min(1, (y - PAD_MARGIN) / usable));
+  // top = +100 (CW), bottom = -100 (CCW)
+  return Math.round((1 - ratio * 2) * 100);
+}
+
+function speedToCanvasY(v) {
+  const usable = touchH - PAD_MARGIN * 2;
+  return PAD_MARGIN + (1 - (v + 100) / 200) * usable;
+}
+
+// ── Rendering ─────────────────────────────────────────────
+
+function renderPad() {
+  if (!touchCtx) return;
+  const cx = touchW / 2;
+  const centerY = speedToCanvasY(0);
+
+  // Background
+  touchCtx.fillStyle = "#0a0f14";
+  touchCtx.fillRect(0, 0, touchW, touchH);
+
+  // Grid lines
+  touchCtx.textAlign = "left";
+  touchCtx.textBaseline = "middle";
+  touchCtx.font = "10px -apple-system, BlinkMacSystemFont, sans-serif";
+  for (const pct of [100, 75, 50, 25, 0, -25, -50, -75, -100]) {
+    const y = speedToCanvasY(pct);
+    if (pct === 0) {
+      touchCtx.strokeStyle = "rgba(150,200,200,0.5)";
+      touchCtx.lineWidth = 1.5;
+    } else {
+      touchCtx.strokeStyle = "rgba(80,120,120,0.12)";
+      touchCtx.lineWidth = 1;
+    }
+    touchCtx.beginPath();
+    touchCtx.moveTo(8, y);
+    touchCtx.lineTo(touchW - 8, y);
+    touchCtx.stroke();
+
+    if (pct % 50 === 0) {
+      touchCtx.fillStyle = pct > 0 ? "rgba(255,136,0,0.6)"
+                         : pct < 0 ? "rgba(51,136,255,0.6)"
+                                   : "rgba(150,200,200,0.5)";
+      const label = pct === 0 ? "STOP"
+                  : pct === 100 ? "CW ↻"
+                  : pct === -100 ? "CCW ↺"
+                  : Math.abs(pct).toString();
+      touchCtx.fillText(label, 10, y - 8);
+    }
+  }
+
+  // ── Trail waveform (flows right → left, right edge = now) ──
+  if (trail.length > 1) {
+    const now = performance.now();
+    const trailX0 = 12;                     // left edge
+    const trailX1 = touchW - 12;            // right edge = "now"
+    const trailW = trailX1 - trailX0;
+
+    // Fill from centerline — each segment gets its own color
+    for (let i = 0; i < trail.length - 1; i++) {
+      const a = trail[i], b = trail[i + 1];
+      const x0 = trailX1 - ((now - a.t) / 1000) / TRAIL_DURATION * trailW;
+      const x1 = trailX1 - ((now - b.t) / 1000) / TRAIL_DURATION * trailW;
+      if (x1 < trailX0 && x0 < trailX0) continue;
+      const age0 = (now - a.t) / 1000 / TRAIL_DURATION;  // 0 = now, 1 = oldest
+      const opacity = Math.max(0, 0.25 * (1 - age0));
+      const avg = (a.v + b.v) / 2;
+      const col = avg >= 0 ? "255,136,0" : "51,136,255";
+      const y0 = speedToCanvasY(a.v);
+      const y1 = speedToCanvasY(b.v);
+
+      // Filled area from center to waveform
+      touchCtx.beginPath();
+      touchCtx.moveTo(x0, centerY);
+      touchCtx.lineTo(x0, y0);
+      touchCtx.lineTo(x1, y1);
+      touchCtx.lineTo(x1, centerY);
+      touchCtx.closePath();
+      touchCtx.fillStyle = `rgba(${col},${opacity * 0.5})`;
+      touchCtx.fill();
+    }
+
+    // Stroke line on top
+    touchCtx.lineWidth = 2;
+    touchCtx.lineCap = "round";
+    touchCtx.lineJoin = "round";
+    for (let i = 0; i < trail.length - 1; i++) {
+      const a = trail[i], b = trail[i + 1];
+      const x0 = trailX1 - ((now - a.t) / 1000) / TRAIL_DURATION * trailW;
+      const x1 = trailX1 - ((now - b.t) / 1000) / TRAIL_DURATION * trailW;
+      if (x1 < trailX0 && x0 < trailX0) continue;
+      const age0 = (now - a.t) / 1000 / TRAIL_DURATION;
+      const opacity = Math.max(0, 0.8 * (1 - age0));
+      const avg = (a.v + b.v) / 2;
+      touchCtx.strokeStyle = avg >= 0
+        ? `rgba(255,136,0,${opacity})`
+        : `rgba(51,136,255,${opacity})`;
+      touchCtx.beginPath();
+      touchCtx.moveTo(x0, speedToCanvasY(a.v));
+      touchCtx.lineTo(x1, speedToCanvasY(b.v));
+      touchCtx.stroke();
+    }
+  }
+
+  if (!padActive && trail.length === 0 && padSignedSpeed === 0) {
+    // Idle prompt
+    touchCtx.fillStyle = "rgba(160,160,160,0.3)";
+    touchCtx.font = "14px -apple-system, BlinkMacSystemFont, sans-serif";
+    touchCtx.textAlign = "center";
+    touchCtx.fillText("touch & drag", cx, centerY);
+    return;
+  }
+
+  // Current speed indicator (glow line + number)
+  const curY = speedToCanvasY(padSignedSpeed);
+  const isCW = padSignedSpeed >= 0;
+  const color = isCW ? [255, 136, 0] : [51, 136, 255];
+
+  if (padActive || padSignedSpeed !== 0) {
+    // Glow line at finger position
+    touchCtx.shadowColor = `rgba(${color},0.6)`;
+    touchCtx.shadowBlur = 12;
+    touchCtx.strokeStyle = `rgba(${color},0.9)`;
+    touchCtx.lineWidth = 3;
+    touchCtx.beginPath();
+    touchCtx.moveTo(12, curY);
+    touchCtx.lineTo(touchW - 12, curY);
+    touchCtx.stroke();
+    touchCtx.shadowBlur = 0;
+  }
+
+  // Speed number
+  const absSpeed = Math.abs(padSignedSpeed);
+  touchCtx.fillStyle = `rgba(${color},0.95)`;
+  touchCtx.font = "bold 48px -apple-system, BlinkMacSystemFont, sans-serif";
+  touchCtx.textAlign = "center";
+  touchCtx.textBaseline = "middle";
+  touchCtx.fillText(absSpeed, cx, centerY - 10);
+
+  // Direction label
+  touchCtx.font = "bold 14px -apple-system, BlinkMacSystemFont, sans-serif";
+  touchCtx.fillText(absSpeed === 0 ? "STOP" : isCW ? "CW ↻" : "CCW ↺", cx, centerY + 18);
+}
+
+// ── Throttled send ────────────────────────────────────────
+
+function padSend(signed) {
+  if (!dbRef) return;
+  const now = performance.now();
+  if (now - lastPadSendTime < PAD_SEND_INTERVAL) return;
+  lastPadSendTime = now;
+
+  const absSpeed = Math.min(100, Math.abs(signed));
+  const dir = signed >= 0 ? 0 : 1;
+
+  // Update local state + UI (sliders & direction buttons)
+  speed1 = absSpeed;
+  dir1 = dir;
+  document.getElementById("slider1").value = absSpeed;
+  document.getElementById("speed1Val").textContent = absSpeed;
+  document.getElementById("cw1").classList.toggle("active", dir === 0);
+  document.getElementById("ccw1").classList.toggle("active", dir === 1);
+
+  if (linkMode !== "off") {
+    const s2 = absSpeed;
+    const d2 = linkMode === "mirror" ? 1 - dir : dir;
+    speed2 = s2; dir2 = d2;
+    document.getElementById("slider2").value = s2;
+    document.getElementById("speed2Val").textContent = s2;
+    document.getElementById("cw2").classList.toggle("active", d2 === 0);
+    document.getElementById("ccw2").classList.toggle("active", d2 === 1);
+  }
+
+  send();
+}
+
+function updateTouchLabel(signed) {
+  const el = document.getElementById("touchLabel");
+  if (signed === 0) {
+    el.textContent = "STOP";
+  } else {
+    const dir = signed > 0 ? "CW ↻" : "CCW ↺";
+    el.textContent = `${Math.abs(signed)}% ${dir}`;
+  }
+}
+
+function resetPad() {
+  padActive = false;
+  padSignedSpeed = 0;
+  trail = [];
+  document.getElementById("touchLabel").textContent = "タッチして上下にドラッグ";
+  renderPad();
+}
+
+// ── Pointer events ────────────────────────────────────────
+
+function pushTrail(v) {
+  trail.push({ t: performance.now(), v });
+}
+
+function trimTrail() {
+  const cutoff = performance.now() - TRAIL_DURATION * 1000;
+  while (trail.length > 0 && trail[0].t < cutoff) trail.shift();
+}
+
+function startTrailLoop() {
+  if (trailRaf) return;
+  function tick() {
+    trimTrail();
+    renderPad();
+    if (padActive || trail.length > 0) {
+      trailRaf = requestAnimationFrame(tick);
+    } else {
+      trailRaf = null;
+      renderPad();  // final idle render
+    }
+  }
+  trailRaf = requestAnimationFrame(tick);
+}
+
+touchCanvas.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  try { touchCanvas.setPointerCapture(e.pointerId); } catch {}
+  padActive = true;
+  // Stop any playing pattern — tell the user why it stopped
+  if (patternJob) toast("パターンを停止しました（タッチパッド操作）");
+  stopPattern();
+  // Touch pad always controls both rotors — force sync if independent
+  if (linkMode === "off") {
+    window.setLink("sync");
+    toast("タッチパッド操作のため、ロータ 1・2 を同期しました");
+  }
+  // Collapse pattern card body to make room
+  document.getElementById("patternBody").classList.add("collapsed");
+  document.getElementById("patternTitle").classList.add("collapsed");
+  padSignedSpeed = padYToSpeed(e.clientY);
+  pushTrail(padSignedSpeed);
+  padSend(padSignedSpeed);
+  updateTouchLabel(padSignedSpeed);
+  startTrailLoop();
+}, { passive: false });
+
+touchCanvas.addEventListener("pointermove", e => {
+  if (!padActive) return;
+  e.preventDefault();
+  padSignedSpeed = padYToSpeed(e.clientY);
+  pushTrail(padSignedSpeed);
+  padSend(padSignedSpeed);
+  updateTouchLabel(padSignedSpeed);
+}, { passive: false });
+
+function padEnd(e) {
+  if (!padActive) return;
+  padActive = false;
+  try { touchCanvas.releasePointerCapture(e.pointerId); } catch {}
+  if (document.getElementById("snapStop").checked) {
+    padSignedSpeed = 0;
+  }
+  // Always flush the final value — the throttle may have dropped the last move
+  lastPadSendTime = 0;
+  padSend(padSignedSpeed);
+  updateTouchLabel(padSignedSpeed);
+  pushTrail(padSignedSpeed);
+  // trailLoop continues running to animate the trail fading out
+}
+touchCanvas.addEventListener("pointerup", padEnd);
+touchCanvas.addEventListener("pointercancel", padEnd);
+
+// ── Init ──────────────────────────────────────────────────
+
+requestAnimationFrame(() => { setupTouchPad(); renderPad(); });
+window.addEventListener("resize", () => { setupTouchPad(); renderPad(); });
 </script>
 </body>
 </html>
